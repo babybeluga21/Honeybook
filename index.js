@@ -265,8 +265,8 @@ function createUI() {
         // tab sticks out from the top-right corner of the box,
         // overlapping it by half its own height like a bookmark
         bookmark.style.position = 'fixed';
-        bookmark.style.left = (rect.right - 46) + 'px';
-        bookmark.style.top = (rect.top - 8) + 'px';
+        bookmark.style.left = (rect.right - 42) + 'px';
+        bookmark.style.top = (rect.top - 16) + 'px';
         bookmark.style.bottom = '';
     }
 
@@ -277,12 +277,12 @@ function createUI() {
     window.addEventListener('resize', positionBookmark);
     window.visualViewport?.addEventListener('resize', positionBookmark);
 
-    bookmark.style.width = '30px';
-    bookmark.style.height = '46px';
-    bookmark.style.background = 'linear-gradient(180deg, #c0455f, #8c2f42)';
-    bookmark.style.boxShadow = '0 3px 10px rgba(0,0,0,.4)';
-    bookmark.style.clipPath = 'polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)';
-    bookmark.style.border = 'none';
+    bookmark.style.width = '36px';
+    bookmark.style.height = '36px';
+    bookmark.style.background = 'radial-gradient(circle at 35% 30%, #e07a92, #c0455f 55%, #7a2436)';
+    bookmark.style.boxShadow = '0 3px 10px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.15)';
+    bookmark.style.borderRadius = '50%';
+    bookmark.style.border = '2px solid rgba(255,255,255,.35)';
     bookmark.style.padding = '0';
     bookmark.style.zIndex = '2147483647';
 
