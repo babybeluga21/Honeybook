@@ -232,41 +232,11 @@ function createUI() {
 
     document.body.appendChild(bookmark);
 
-    function findInputBox() {
-        return (
-            document.querySelector('#send_form') ||
-            document.querySelector('#form_sheld') ||
-            document.querySelector('#nonQRFormItems') ||
-            document.querySelector('#send_textarea')?.closest('form') ||
-            null
-        );
-    }
-
-    function positionBookmark() {
-        const box = findInputBox();
-
-        if (!box) {
-            bookmark.style.position = 'fixed';
-            bookmark.style.left = '10px';
-            bookmark.style.bottom = '82px';
-            bookmark.style.top = '';
-            bookmark.style.right = '';
-            return;
-        }
-
-        const rect = box.getBoundingClientRect();
-
-        bookmark.style.position = 'fixed';
-        bookmark.style.left = (rect.right - 30) + 'px';
-        bookmark.style.top = (rect.top - 16) + 'px';
-        bookmark.style.right = '';
-        bookmark.style.bottom = '';
-    }
-
-    positionBookmark();
-
-    window.addEventListener('resize', positionBookmark);
-    window.visualViewport?.addEventListener('resize', positionBookmark);
+    // TEMP: hardcoded position, no box-tracking, just to confirm
+    // the circle style itself actually renders
+    bookmark.style.position = 'fixed';
+    bookmark.style.left = '20px';
+    bookmark.style.top = '120px';
 
     bookmark.style.width = '36px';
     bookmark.style.height = '36px';
