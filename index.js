@@ -35,10 +35,192 @@ function getKeys(entry) {
     return [];
 }
 
+// CSS is injected directly here instead of relying on manifest.json's
+// "css" auto-load, since that mechanism was confirmed to never fire
+// for this extension (verified via document.styleSheets inspection).
+function injectStyles() {
+    if (document.getElementById(`${EXT_ID}-styles`)) {
+        return;
+    }
+
+    const style = document.createElement('style');
+    style.id = `${EXT_ID}-styles`;
+    style.textContent = `
+#lorebook-trigger-tracker-bookmark {
+    position: fixed;
+    left: 10px;
+    bottom: 82px;
+    width: 34px;
+    height: 42px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px 5px 2px 2px;
+    background: rgba(20,20,24,.72);
+    color: #eee;
+    z-index: 2147483646;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+#lorebook-trigger-tracker-bookmark .ltt-bookmark-icon {
+    display: block;
+    font-size: 17px;
+    line-height: 34px;
+    text-align: center;
+}
+
+#lorebook-trigger-tracker-menu,
+#lorebook-trigger-tracker-panel {
+    position: fixed;
+    left: 10px;
+    z-index: 2147483645;
+    display: none;
+    color: #eee;
+    background: rgba(15,15,18,.95);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+#lorebook-trigger-tracker-menu {
+    bottom: 132px;
+    width: 250px;
+    padding: 8px;
+}
+
+#lorebook-trigger-tracker-menu.ltt-open,
+#lorebook-trigger-tracker-panel.ltt-open {
+    display: block;
+}
+
+#lorebook-trigger-tracker-menu .ltt-menu-title {
+    padding: 6px 8px 8px;
+    color: #aaa;
+    font-size: 11px;
+    letter-spacing: .12em;
+}
+
+#lorebook-trigger-tracker-menu .ltt-tool {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #eee;
+    text-align: left;
+    cursor: pointer;
+}
+
+#lorebook-trigger-tracker-menu .ltt-tool:hover {
+    background: rgba(255,255,255,.07);
+}
+
+.ltt-tool-symbol {
+    width: 34px;
+    text-align: center;
+    font-size: 20px;
+}
+
+.ltt-tool-symbol sup {
+    margin-left: 1px;
+    color: #d28a9c;
+    font-size: 9px;
+}
+
+.ltt-tool-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ltt-tool-text strong {
+    font-size: 12px;
+    letter-spacing: .06em;
+}
+
+.ltt-tool-text small {
+    color: #999;
+    font-size: 11px;
+}
+
+.ltt-arrow {
+    color: #777;
+    font-size: 20px;
+}
+
+#lorebook-trigger-tracker-panel {
+    bottom: 132px;
+    width: min(330px, calc(100vw - 20px));
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.ltt-panel-header {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(15,15,18,.97);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+}
+
+.ltt-close {
+    border: 0;
+    background: transparent;
+    color: #aaa;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.ltt-content {
+    padding: 8px 10px 12px;
+}
+
+.ltt-entry {
+    padding: 8px 4px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.ltt-entry-title {
+    font-weight: 600;
+}
+
+.ltt-detail {
+    margin-top: 3px;
+    padding-left: 17px;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.ltt-empty {
+    padding: 18px 8px;
+    color: #999;
+    text-align: center;
+}
+    `;
+
+    document.head.appendChild(style);
+}
+
 function createUI() {
     if (document.getElementById(`${EXT_ID}-bookmark`)) {
         return;
     }
+
+    injectStyles();
 
     const bookmark = document.createElement('button');
 
@@ -46,10 +228,6 @@ function createUI() {
     bookmark.type = 'button';
     bookmark.title = 'Lorebook Tools';
 
-    // FIX: bookmark button had no visible content before —
-    // it rendered as an empty semi-transparent box that blended
-    // into the dark ST background, making it look like nothing
-    // was created at all.
     bookmark.innerHTML = `
         <span class="ltt-bookmark-icon">
             ◉
@@ -354,78 +532,13 @@ function init() {
 }
 
 
-function safeInit() {
-    try {
-        init();
-
-        // check whether the browser ever loaded a stylesheet
-        // pointing at this extension's style.css at all
-        const sheets = Array.from(document.styleSheets);
-        const ours = sheets.filter(s => (s.href || '').includes(EXT_ID));
-
-        if (ours.length === 0) {
-            const allHrefs = sheets
-                .map(s => s.href || '(inline)')
-                .join('\n');
-
-            alert(
-                'STYLE.CSS NOT LOADED ❌\n' +
-                'No stylesheet with "' + EXT_ID + '" in its URL was found.\n\n' +
-                'All loaded stylesheets:\n' + allHrefs
-            );
-        } else {
-            alert(
-                'STYLE.CSS FOUND ✅\n' +
-                ours.map(s => s.href).join('\n')
-            );
-        }
-
-        const el = document.getElementById(`${EXT_ID}-bookmark`);
-
-        if (!el) {
-            alert('BOOKMARK NOT FOUND ❌ — element does not exist in DOM at all');
-            return;
-        }
-
-        const rect = el.getBoundingClientRect();
-        const cs = getComputedStyle(el);
-
-        alert(
-            'BOOKMARK FOUND ✅\n' +
-            'position: ' + cs.position + '\n' +
-            'display: ' + cs.display + '\n' +
-            'visibility: ' + cs.visibility + '\n' +
-            'opacity: ' + cs.opacity + '\n' +
-            'width: ' + rect.width + ' height: ' + rect.height + '\n' +
-            'top: ' + rect.top + ' left: ' + rect.left + '\n' +
-            'zIndex: ' + cs.zIndex + '\n' +
-            'background: ' + cs.backgroundColor
-        );
-
-        // force it to be unmistakably visible for this test
-        el.style.background = 'red';
-        el.style.zIndex = '2147483647';
-        el.style.position = 'fixed';
-        el.style.top = '100px';
-        el.style.left = '10px';
-        el.style.width = '60px';
-        el.style.height = '60px';
-        el.style.display = 'block';
-        el.style.visibility = 'visible';
-        el.style.opacity = '1';
-
-    } catch (error) {
-        alert('INIT ERROR ❌: ' + error.message);
-    }
-}
-
 if (
     document.readyState === 'loading'
 ) {
 
     document.addEventListener(
         'DOMContentLoaded',
-        safeInit,
+        init,
         {
             once: true
         }
@@ -435,6 +548,6 @@ if (
 
 else {
 
-    safeInit();
+    init();
 
 }
