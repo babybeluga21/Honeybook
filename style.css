@@ -32,10 +32,7 @@
 }
 
 #lorebook-trigger-tracker-bookmark .ltt-bookmark-icon {
-    display: block;
-    font-size: 17px;
-    line-height: 34px;
-    text-align: center;
+    display: none;
 }
 
 #lorebook-trigger-tracker-menu,
