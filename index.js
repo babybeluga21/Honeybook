@@ -357,7 +357,41 @@ function init() {
 function safeInit() {
     try {
         init();
-        alert('INIT OK ✅');
+
+        const el = document.getElementById(`${EXT_ID}-bookmark`);
+
+        if (!el) {
+            alert('BOOKMARK NOT FOUND ❌ — element does not exist in DOM at all');
+            return;
+        }
+
+        const rect = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+
+        alert(
+            'BOOKMARK FOUND ✅\n' +
+            'position: ' + cs.position + '\n' +
+            'display: ' + cs.display + '\n' +
+            'visibility: ' + cs.visibility + '\n' +
+            'opacity: ' + cs.opacity + '\n' +
+            'width: ' + rect.width + ' height: ' + rect.height + '\n' +
+            'top: ' + rect.top + ' left: ' + rect.left + '\n' +
+            'zIndex: ' + cs.zIndex + '\n' +
+            'background: ' + cs.backgroundColor
+        );
+
+        // force it to be unmistakably visible for this test
+        el.style.background = 'red';
+        el.style.zIndex = '2147483647';
+        el.style.position = 'fixed';
+        el.style.top = '100px';
+        el.style.left = '10px';
+        el.style.width = '60px';
+        el.style.height = '60px';
+        el.style.display = 'block';
+        el.style.visibility = 'visible';
+        el.style.opacity = '1';
+
     } catch (error) {
         alert('INIT ERROR ❌: ' + error.message);
     }
