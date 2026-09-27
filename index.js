@@ -1,26 +1,44 @@
-console.log('[LTT TEST] index.js loaded');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lorebook UI Test</title>
 
-const testButton = document.createElement('button');
+    <link rel="stylesheet" href="style.css">
+</head>
 
-testButton.id = 'ltt-test-button';
-testButton.textContent = 'TEST';
+<body>
 
-testButton.style.position = 'fixed';
-testButton.style.left = '10px';
-testButton.style.bottom = '100px';
-testButton.style.zIndex = '999999999';
+    <button id="bookmark">
+        <span>▮</span>
+    </button>
 
-testButton.style.width = '60px';
-testButton.style.height = '35px';
 
-testButton.style.background = 'red';
-testButton.style.color = 'white';
+    <div id="menu">
 
-testButton.style.border = 'none';
-testButton.style.borderRadius = '8px';
+        <div class="menu-title">
+            TOOLS
+        </div>
 
-testButton.style.fontSize = '14px';
+        <button class="tool">
 
-document.body.appendChild(testButton);
+            <span class="symbol">
+                ◉<sup>0</sup>
+            </span>
 
-console.log('[LTT TEST] button created');
+            <span class="text">
+                <strong>LOREBOOK</strong>
+                <small>Trigger Tracker</small>
+            </span>
+
+            <span class="arrow">
+                ›
+            </span>
+
+        </button>
+
+    </div>
+
+</body>
+</html>
