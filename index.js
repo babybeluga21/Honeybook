@@ -227,31 +227,64 @@ function createUI() {
     bookmark.type = 'button';
     bookmark.title = 'Lorebook Tools';
 
-    bookmark.innerHTML = `
-        <span class="ltt-bookmark-icon">
-            🔥
-        </span>
-    `;
+    // pure CSS ribbon shape — no icon/emoji, just a solid tab
+    // with a V-notch cut into the bottom edge, like a bookmark
+    // ribbon hanging out of the box
+    bookmark.innerHTML = '';
 
     document.body.appendChild(bookmark);
 
-    // TEMP TEST: force center-screen placement via direct inline
-    // style (bypasses the <style> tag entirely, same technique
-    // that successfully rendered the red test box earlier)
-    bookmark.style.position = 'fixed';
-    bookmark.style.top = '50%';
-    bookmark.style.left = '50%';
-    bookmark.style.transform = 'translate(-50%, -50%)';
-    bookmark.style.width = '90px';
-    bookmark.style.height = '90px';
-    bookmark.style.fontSize = '48px';
-    bookmark.style.background = 'red';
-    bookmark.style.display = 'flex';
-    bookmark.style.alignItems = 'center';
-    bookmark.style.justifyContent = 'center';
+    // Attach the bookmark tab directly to the real ST message
+    // input box, so it "grows out of" the box edge instead of
+    // floating independently. Try known ST selectors in order.
+    function findInputBox() {
+        return (
+            document.querySelector('#send_form') ||
+            document.querySelector('#form_sheld') ||
+            document.querySelector('#nonQRFormItems') ||
+            document.querySelector('#send_textarea')?.closest('form') ||
+            null
+        );
+    }
+
+    function positionBookmark() {
+        const box = findInputBox();
+
+        if (!box) {
+            // fallback: keep it fixed near bottom-left if the
+            // box can't be found on this ST version
+            bookmark.style.position = 'fixed';
+            bookmark.style.left = '10px';
+            bookmark.style.bottom = '82px';
+            bookmark.style.top = '';
+            return;
+        }
+
+        const rect = box.getBoundingClientRect();
+
+        // tab sticks out from the top-right corner of the box,
+        // overlapping it by half its own height like a bookmark
+        bookmark.style.position = 'fixed';
+        bookmark.style.left = (rect.right - 46) + 'px';
+        bookmark.style.top = (rect.top - 8) + 'px';
+        bookmark.style.bottom = '';
+    }
+
+    positionBookmark();
+
+    // re-run on resize/orientation/keyboard show-hide, since the
+    // input box moves in all of those cases on mobile
+    window.addEventListener('resize', positionBookmark);
+    window.visualViewport?.addEventListener('resize', positionBookmark);
+
+    bookmark.style.width = '30px';
+    bookmark.style.height = '46px';
+    bookmark.style.background = 'linear-gradient(180deg, #c0455f, #8c2f42)';
+    bookmark.style.boxShadow = '0 3px 10px rgba(0,0,0,.4)';
+    bookmark.style.clipPath = 'polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)';
+    bookmark.style.border = 'none';
+    bookmark.style.padding = '0';
     bookmark.style.zIndex = '2147483647';
-    bookmark.style.borderRadius = '50%';
-    bookmark.style.border = '4px solid yellow';
 
 
     const menu = document.createElement('div');
