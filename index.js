@@ -46,6 +46,16 @@ function createUI() {
     bookmark.type = 'button';
     bookmark.title = 'Lorebook Tools';
 
+    // FIX: bookmark button had no visible content before —
+    // it rendered as an empty semi-transparent box that blended
+    // into the dark ST background, making it look like nothing
+    // was created at all.
+    bookmark.innerHTML = `
+        <span class="ltt-bookmark-icon">
+            ◉
+        </span>
+    `;
+
     document.body.appendChild(bookmark);
 
 
