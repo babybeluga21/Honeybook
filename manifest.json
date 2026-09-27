@@ -4,7 +4,7 @@
   "requires": [],
   "optional": [],
   "js": "index.js",
-  "css": "style.css",
+  "css": "ltt-style.css",
   "author": "Rin",
   "version": "0.3.0",
   "homePage": "https://github.com/"
