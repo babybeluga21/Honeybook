@@ -230,9 +230,8 @@ function createUI() {
     // no icon/emoji — plain circle, decorated via CSS only
     bookmark.innerHTML = '';
 
-    // TRUE EMBEDDING: append the button as an actual child of the
-    // ST message input box, instead of floating separately in
-    // document.body and tracking its position on every resize.
+    document.body.appendChild(bookmark);
+
     function findInputBox() {
         return (
             document.querySelector('#send_form') ||
@@ -243,33 +242,31 @@ function createUI() {
         );
     }
 
-    const box = findInputBox();
+    function positionBookmark() {
+        const box = findInputBox();
 
-    if (box) {
-        // the box needs a positioning context for our absolute
-        // child to anchor to; only set it if it doesn't have one
-        // already, so we don't disturb ST's own layout
-        const boxPosition = getComputedStyle(box).position;
-
-        if (boxPosition === 'static') {
-            box.style.position = 'relative';
+        if (!box) {
+            bookmark.style.position = 'fixed';
+            bookmark.style.left = '10px';
+            bookmark.style.bottom = '82px';
+            bookmark.style.top = '';
+            bookmark.style.right = '';
+            return;
         }
 
-        bookmark.style.position = 'absolute';
-        bookmark.style.top = '-16px';
-        bookmark.style.right = '6px';
-        bookmark.style.left = '';
-        bookmark.style.bottom = '';
+        const rect = box.getBoundingClientRect();
 
-        box.appendChild(bookmark);
-    } else {
-        // fallback: this ST version's DOM didn't match any known
-        // selector, so float it in a fixed spot instead
         bookmark.style.position = 'fixed';
-        bookmark.style.left = '10px';
-        bookmark.style.bottom = '82px';
-        document.body.appendChild(bookmark);
+        bookmark.style.left = (rect.right - 30) + 'px';
+        bookmark.style.top = (rect.top - 16) + 'px';
+        bookmark.style.right = '';
+        bookmark.style.bottom = '';
     }
+
+    positionBookmark();
+
+    window.addEventListener('resize', positionBookmark);
+    window.visualViewport?.addEventListener('resize', positionBookmark);
 
     bookmark.style.width = '36px';
     bookmark.style.height = '36px';
