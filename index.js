@@ -1,21 +1,18 @@
 const EXT_ID = 'lorebook-trigger-tracker';
 
 let activatedEntries = [];
-let worldInfoEntries = [];
-let panelOpen = false;
-let initialized = false;
 
 function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, char => ({
+    return String(value ?? '').replace(/[&<>"']/g, c => ({
         '&': '&amp;',
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
         "'": '&#039;',
-    }[char]));
+    }[c]));
 }
 
-function getEntryName(entry) {
+function getName(entry) {
     return (
         entry?.comment ||
         entry?.name ||
@@ -24,57 +21,76 @@ function getEntryName(entry) {
     );
 }
 
-function getEntryKeys(entry) {
-    const keys = entry?.key ?? [];
+function getKeys(entry) {
+    const key = entry?.key;
 
-    if (Array.isArray(keys)) {
-        return keys;
+    if (Array.isArray(key)) {
+        return key;
     }
 
-    return keys
-        ? [String(keys)]
-        : [];
+    if (key) {
+        return [String(key)];
+    }
+
+    return [];
 }
 
-function createButton() {
-    if (document.getElementById(`${EXT_ID}-button`)) {
+function createUI() {
+    if (document.getElementById(`${EXT_ID}-bookmark`)) {
         return;
     }
 
-    const button = document.createElement('button');
+    const bookmark = document.createElement('button');
 
-    button.id = `${EXT_ID}-button`;
-    button.type = 'button';
-    button.title = 'Lorebook Trigger Tracker';
+    bookmark.id = `${EXT_ID}-bookmark`;
+    bookmark.type = 'button';
+    bookmark.title = 'Lorebook Tools';
 
-    button.innerHTML = `
-        <span>◉</span>
-        <sup>0</sup>
+    document.body.appendChild(bookmark);
+
+
+    const menu = document.createElement('div');
+
+    menu.id = `${EXT_ID}-menu`;
+
+    menu.innerHTML = `
+        <div class="ltt-menu-title">
+            TOOLS
+        </div>
+
+        <button
+            type="button"
+            class="ltt-tool"
+            id="${EXT_ID}-lorebook"
+        >
+            <span class="ltt-tool-symbol">
+                ◉<sup>0</sup>
+            </span>
+
+            <span class="ltt-tool-text">
+                <strong>LOREBOOK</strong>
+                <small>Trigger Tracker</small>
+            </span>
+
+            <span class="ltt-arrow">
+                ›
+            </span>
+        </button>
     `;
 
-    button.addEventListener('click', () => {
-        togglePanel();
-    });
+    document.body.appendChild(menu);
 
-    document.body.appendChild(button);
-
-    console.log(
-        '[Lorebook Trigger Tracker] Button created.'
-    );
-}
-
-function createPanel() {
-    if (document.getElementById(`${EXT_ID}-panel`)) {
-        return;
-    }
 
     const panel = document.createElement('div');
 
     panel.id = `${EXT_ID}-panel`;
 
     panel.innerHTML = `
-        <div class="ltt-header">
-            <span>WORLD INFO</span>
+        <div class="ltt-panel-header">
+
+            <span>
+                WORLD INFO
+            </span>
 
             <button
                 type="button"
@@ -82,52 +98,62 @@ function createPanel() {
             >
                 ×
             </button>
+
         </div>
 
         <div class="ltt-content">
+
             <div class="ltt-empty">
                 No World Info activated yet.
             </div>
+
         </div>
     `;
 
     document.body.appendChild(panel);
 
+
+    bookmark.addEventListener('click', () => {
+
+        menu.classList.toggle(
+            'ltt-open'
+        );
+
+    });
+
+
+    document
+        .getElementById(`${EXT_ID}-lorebook`)
+        .addEventListener('click', () => {
+
+            menu.classList.remove(
+                'ltt-open'
+            );
+
+            panel.classList.add(
+                'ltt-open'
+            );
+
+        });
+
+
     panel
         .querySelector('.ltt-close')
         .addEventListener('click', () => {
-            panelOpen = false;
-            panel.classList.remove('ltt-open');
+
+            panel.classList.remove(
+                'ltt-open'
+            );
+
         });
 }
 
-function togglePanel() {
-    const panel = document.getElementById(
-        `${EXT_ID}-panel`
-    );
-
-    if (!panel) {
-        return;
-    }
-
-    panelOpen = !panelOpen;
-
-    panel.classList.toggle(
-        'ltt-open',
-        panelOpen
-    );
-}
 
 function updateCount() {
-    const button = document.getElementById(
-        `${EXT_ID}-button`
+
+    const counter = document.querySelector(
+        `#${EXT_ID}-lorebook sup`
     );
-
-    if (!button) {
-        return;
-    }
-
-    const counter = button.querySelector('sup');
 
     if (!counter) {
         return;
@@ -136,23 +162,25 @@ function updateCount() {
     counter.textContent =
         activatedEntries.length > 99
             ? '99+'
-            : String(activatedEntries.length);
+            : String(
+                activatedEntries.length
+            );
 }
 
+
 function renderPanel() {
-    const panel = document.getElementById(
-        `${EXT_ID}-panel`
+
+    const content = document.querySelector(
+        `#${EXT_ID}-panel .ltt-content`
     );
 
-    if (!panel) {
+    if (!content) {
         return;
     }
 
-    const content = panel.querySelector(
-        '.ltt-content'
-    );
 
     if (!activatedEntries.length) {
+
         content.innerHTML = `
             <div class="ltt-empty">
                 No World Info activated.
@@ -162,90 +190,60 @@ function renderPanel() {
         return;
     }
 
-    const activatedIds = new Set(
-        activatedEntries.map(
-            entry => String(entry?.uid)
-        )
-    );
 
-    const entriesToShow =
-        worldInfoEntries.length
-            ? worldInfoEntries
-            : activatedEntries;
+    content.innerHTML =
+        activatedEntries
+            .map(entry => {
 
-    content.innerHTML = entriesToShow
-        .map(entry => {
+                const name =
+                    escapeHtml(
+                        getName(entry)
+                    );
 
-            const uid =
-                String(entry?.uid ?? '');
+                const keys =
+                    getKeys(entry);
 
-            const active =
-                activatedIds.has(uid);
-
-            const name =
-                escapeHtml(
-                    getEntryName(entry)
-                );
-
-            const keys =
-                getEntryKeys(entry);
-
-            const trigger =
-                keys.length
-                    ? escapeHtml(
+                const trigger =
+                    escapeHtml(
                         keys.join('", "')
-                    )
-                    : 'Unknown';
+                    );
 
-            if (active) {
+                const uid =
+                    escapeHtml(
+                        entry?.uid ?? '?'
+                    );
+
+
                 return `
-                    <div class="ltt-entry active">
+                    <div class="ltt-entry">
 
                         <div class="ltt-entry-title">
                             ✓ ${name}
                         </div>
 
                         <div class="ltt-detail">
-                            Trigger: "${trigger}"
+                            Trigger:
+                            "${trigger || 'Unknown'}"
                         </div>
 
                         <div class="ltt-detail">
-                            Entry: #${escapeHtml(uid)}
+                            Entry: #${uid}
                         </div>
 
                     </div>
                 `;
-            }
 
-            return `
-                <div class="ltt-entry inactive">
-
-                    <div class="ltt-entry-title">
-                        ✗ ${name}
-                    </div>
-
-                    <div class="ltt-detail">
-                        No trigger
-                    </div>
-
-                </div>
-            `;
-        })
-        .join('');
+            })
+            .join('');
 }
 
-function handleWorldInfoActivated(data) {
 
-    /*
-     * SillyTavern currently emits:
-     *
-     * WORLD_INFO_ACTIVATED
-     *        ↓
-     * Array<WorldInfoEntry>
-     */
+function onActivated(data) {
 
     if (Array.isArray(data)) {
+
         activatedEntries = data;
+
     }
 
     else if (
@@ -253,16 +251,23 @@ function handleWorldInfoActivated(data) {
             data?.allActivatedEntries
         )
     ) {
+
         activatedEntries =
             data.allActivatedEntries;
+
     }
 
     else {
+
         activatedEntries = [];
+
     }
 
+
     updateCount();
+
     renderPanel();
+
 
     console.log(
         '[Lorebook Trigger Tracker] Activated:',
@@ -270,155 +275,91 @@ function handleWorldInfoActivated(data) {
     );
 }
 
-function handleWorldInfoLoaded(data) {
-
-    if (!data) {
-        return;
-    }
-
-    const all = [];
-
-    const sources = [
-        data.globalLore,
-        data.characterLore,
-        data.chatLore,
-        data.personaLore,
-    ];
-
-    for (const source of sources) {
-
-        if (!Array.isArray(source)) {
-            continue;
-        }
-
-        for (const entry of source) {
-            if (entry) {
-                all.push(entry);
-            }
-        }
-    }
-
-    worldInfoEntries = all;
-
-    renderPanel();
-
-    console.log(
-        '[Lorebook Trigger Tracker] Entries loaded:',
-        worldInfoEntries
-    );
-}
 
 function connectEvents() {
 
-    if (
-        typeof SillyTavern === 'undefined' ||
-        typeof SillyTavern.getContext !== 'function'
-    ) {
-        console.warn(
-            '[Lorebook Trigger Tracker] SillyTavern context unavailable.'
-        );
+    try {
 
-        return false;
+        const context =
+            typeof SillyTavern !== 'undefined'
+                ? SillyTavern.getContext?.()
+                : null;
+
+
+        if (
+            !context?.eventSource ||
+            !context?.event_types
+        ) {
+
+            console.warn(
+                '[Lorebook Trigger Tracker] Event system unavailable.'
+            );
+
+            return;
+        }
+
+
+        const event =
+            context.event_types
+                .WORLD_INFO_ACTIVATED;
+
+
+        if (event) {
+
+            context.eventSource.on(
+                event,
+                onActivated
+            );
+
+
+            console.log(
+                '[Lorebook Trigger Tracker] WORLD_INFO_ACTIVATED connected.'
+            );
+
+        }
+
     }
 
-    const context =
-        SillyTavern.getContext();
+    catch (error) {
 
-    if (!context) {
-        return false;
+        console.error(
+            '[Lorebook Trigger Tracker] Failed to connect:',
+            error
+        );
+
     }
-
-    const eventSource =
-        context.eventSource;
-
-    const eventTypes =
-        context.event_types;
-
-    if (
-        !eventSource ||
-        !eventTypes
-    ) {
-        console.warn(
-            '[Lorebook Trigger Tracker] Event system unavailable.'
-        );
-
-        return false;
-    }
-
-    if (
-        eventTypes.WORLD_INFO_ACTIVATED
-    ) {
-
-        eventSource.on(
-            eventTypes.WORLD_INFO_ACTIVATED,
-            handleWorldInfoActivated
-        );
-
-        console.log(
-            '[Lorebook Trigger Tracker] WORLD_INFO_ACTIVATED connected.'
-        );
-    }
-
-    if (
-        eventTypes.WORLDINFO_ENTRIES_LOADED
-    ) {
-
-        eventSource.on(
-            eventTypes.WORLDINFO_ENTRIES_LOADED,
-            handleWorldInfoLoaded
-        );
-
-        console.log(
-            '[Lorebook Trigger Tracker] WORLDINFO_ENTRIES_LOADED connected.'
-        );
-    }
-
-    return true;
 }
+
 
 function init() {
 
-    if (initialized) {
-        return;
-    }
-
-    initialized = true;
-
-    console.log(
-        '[Lorebook Trigger Tracker] Initializing...'
-    );
-
-    createButton();
-    createPanel();
+    createUI();
 
     connectEvents();
+
 
     console.log(
         '[Lorebook Trigger Tracker] Ready.'
     );
 }
 
-function start() {
 
-    if (
-        document.readyState === 'loading'
-    ) {
-        document.addEventListener(
-            'DOMContentLoaded',
-            init,
-            { once: true }
-        );
-    } else {
-        init();
-    }
+if (
+    document.readyState === 'loading'
+) {
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        init,
+        {
+            once: true
+        }
+    );
+
 }
 
-/*
- * Start immediately.
- *
- * This deliberately does NOT depend on
- * manifest.hooks.activate so older ST
- * versions can load it too.
- */
+else {
 
-start();
+    init();
+
+}
