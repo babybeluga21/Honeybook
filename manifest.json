@@ -6,9 +6,6 @@
   "js": "index.js",
   "css": "style.css",
   "author": "Rin",
-  "version": "0.1.1",
-  "homePage": "https://github.com/",
-  "hooks": {
-    "activate": "init"
-  }
+  "version": "0.2.0",
+  "homePage": "https://github.com/"
 }
