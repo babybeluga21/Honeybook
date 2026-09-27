@@ -227,16 +227,12 @@ function createUI() {
     bookmark.type = 'button';
     bookmark.title = 'Lorebook Tools';
 
-    // pure CSS ribbon shape — no icon/emoji, just a solid tab
-    // with a V-notch cut into the bottom edge, like a bookmark
-    // ribbon hanging out of the box
+    // no icon/emoji — plain circle, decorated via CSS only
     bookmark.innerHTML = '';
 
-    document.body.appendChild(bookmark);
-
-    // Attach the bookmark tab directly to the real ST message
-    // input box, so it "grows out of" the box edge instead of
-    // floating independently. Try known ST selectors in order.
+    // TRUE EMBEDDING: append the button as an actual child of the
+    // ST message input box, instead of floating separately in
+    // document.body and tracking its position on every resize.
     function findInputBox() {
         return (
             document.querySelector('#send_form') ||
@@ -247,35 +243,33 @@ function createUI() {
         );
     }
 
-    function positionBookmark() {
-        const box = findInputBox();
+    const box = findInputBox();
 
-        if (!box) {
-            // fallback: keep it fixed near bottom-left if the
-            // box can't be found on this ST version
-            bookmark.style.position = 'fixed';
-            bookmark.style.left = '10px';
-            bookmark.style.bottom = '82px';
-            bookmark.style.top = '';
-            return;
+    if (box) {
+        // the box needs a positioning context for our absolute
+        // child to anchor to; only set it if it doesn't have one
+        // already, so we don't disturb ST's own layout
+        const boxPosition = getComputedStyle(box).position;
+
+        if (boxPosition === 'static') {
+            box.style.position = 'relative';
         }
 
-        const rect = box.getBoundingClientRect();
-
-        // tab sticks out from the top-right corner of the box,
-        // overlapping it by half its own height like a bookmark
-        bookmark.style.position = 'fixed';
-        bookmark.style.left = (rect.right - 42) + 'px';
-        bookmark.style.top = (rect.top - 16) + 'px';
+        bookmark.style.position = 'absolute';
+        bookmark.style.top = '-16px';
+        bookmark.style.right = '6px';
+        bookmark.style.left = '';
         bookmark.style.bottom = '';
+
+        box.appendChild(bookmark);
+    } else {
+        // fallback: this ST version's DOM didn't match any known
+        // selector, so float it in a fixed spot instead
+        bookmark.style.position = 'fixed';
+        bookmark.style.left = '10px';
+        bookmark.style.bottom = '82px';
+        document.body.appendChild(bookmark);
     }
-
-    positionBookmark();
-
-    // re-run on resize/orientation/keyboard show-hide, since the
-    // input box moves in all of those cases on mobile
-    window.addEventListener('resize', positionBookmark);
-    window.visualViewport?.addEventListener('resize', positionBookmark);
 
     bookmark.style.width = '36px';
     bookmark.style.height = '36px';
