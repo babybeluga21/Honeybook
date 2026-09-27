@@ -1,3 +1,5 @@
+document.title = 'SCRIPT RAN ✅';
+
 const EXT_ID = 'lorebook-trigger-tracker';
 
 let activatedEntries = [];
