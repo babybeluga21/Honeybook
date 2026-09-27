@@ -1,3 +1,5 @@
+alert('SCRIPT RAN ✅');
+
 function init() {
     const test = document.createElement('button');
 
