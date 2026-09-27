@@ -1,204 +1,186 @@
-#lorebook-trigger-tracker {
-    --lbtt-bg: rgba(12, 12, 14, .90);
-    --lbtt-bg-soft: rgba(255,255,255,.045);
-    --lbtt-border: rgba(255,255,255,.13);
-    --lbtt-text: rgba(255,255,255,.90);
-    --lbtt-muted: rgba(255,255,255,.52);
-    --lbtt-accent: #d86b93;
-
+#lorebook-trigger-tracker-button {
     position: fixed;
-    left: 38px;
-    bottom: 78px;
-    z-index: 10050;
-    font-family: var(--mainFontFamily, system-ui, sans-serif);
-    color: var(--lbtt-text);
-    pointer-events: none;
-}
+    left: 10px;
+    bottom: 82px;
 
-#lorebook-trigger-tracker .lbtt-button {
-    pointer-events: auto;
     width: 34px;
     height: 34px;
+
     padding: 0;
-    border: 0;
-    background: transparent;
-    color: rgba(255,255,255,.72);
-    cursor: pointer;
-    position: relative;
+    margin: 0;
+
+    border: none;
+    outline: none;
+
+    border-radius: 50%;
+
+    background: rgba(0, 0, 0, 0.45);
+
+    color: #ffffff;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+
+    z-index: 2147483646;
+
+    cursor: pointer;
+
+    font-size: 17px;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.35);
+
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+#lorebook-trigger-tracker-button span {
     line-height: 1;
-    text-shadow: 0 1px 8px rgba(0,0,0,.7);
-    transition: transform .16s ease, color .16s ease;
 }
 
-#lorebook-trigger-tracker .lbtt-button:hover,
-#lorebook-trigger-tracker.lbtt-open .lbtt-button {
-    color: var(--lbtt-accent);
-    transform: scale(1.05);
-}
-
-#lorebook-trigger-tracker .lbtt-badge {
+#lorebook-trigger-tracker-button sup {
     position: absolute;
-    top: -2px;
-    right: -7px;
-    min-width: 14px;
-    height: 14px;
+
+    top: -3px;
+    right: -3px;
+
+    min-width: 13px;
+    height: 13px;
+
     padding: 0 3px;
-    border-radius: 99px;
-    background: rgba(216,107,147,.92);
-    color: #fff;
+
+    border-radius: 10px;
+
+    background: #b85b72;
+    color: #ffffff;
+
     font-size: 9px;
-    font-weight: 700;
-    line-height: 14px;
+    font-weight: 600;
+
+    line-height: 13px;
     text-align: center;
-    box-sizing: border-box;
-    box-shadow: 0 1px 5px rgba(0,0,0,.35);
 }
 
-#lorebook-trigger-tracker .lbtt-badge.lbtt-hidden {
+#lorebook-trigger-tracker-panel {
+    position: fixed;
+
+    left: 10px;
+    bottom: 124px;
+
+    width: min(
+        330px,
+        calc(100vw - 20px)
+    );
+
+    max-height: 55vh;
+
+    overflow-y: auto;
+
     display: none;
+
+    z-index: 2147483645;
+
+    border-radius: 12px;
+
+    border: 1px solid
+        rgba(255,255,255,.12);
+
+    background:
+        rgba(15,15,18,.94);
+
+    color: #eeeeee;
+
+    box-shadow:
+        0 8px 30px
+        rgba(0,0,0,.5);
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    font-size: 13px;
 }
 
-#lorebook-trigger-tracker .lbtt-panel {
-    pointer-events: auto;
-    position: absolute;
-    left: -4px;
-    bottom: 42px;
-    width: min(360px, calc(100vw - 48px));
-    max-height: min(58vh, 520px);
-    overflow: auto;
-    display: none;
-    padding: 13px 14px 15px;
-    border: 1px solid var(--lbtt-border);
-    border-radius: 14px;
-    background: var(--lbtt-bg);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 12px 36px rgba(0,0,0,.45);
-    box-sizing: border-box;
-}
-
-#lorebook-trigger-tracker.lbtt-open .lbtt-panel {
+#lorebook-trigger-tracker-panel.ltt-open {
     display: block;
 }
 
-#lorebook-trigger-tracker .lbtt-panel-head {
+#lorebook-trigger-tracker-panel
+.ltt-header {
+    position: sticky;
+
+    top: 0;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 12px;
-    font-weight: 700;
+
+    padding: 10px 12px;
+
+    background:
+        rgba(15,15,18,.97);
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,.08);
+
+    font-weight: 600;
+
     letter-spacing: .08em;
 }
 
-#lorebook-trigger-tracker .lbtt-close {
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
+#lorebook-trigger-tracker-panel
+.ltt-close {
+    border: none;
     background: transparent;
-    color: var(--lbtt-muted);
-    font-size: 18px;
+
+    color: #aaa;
+
+    font-size: 20px;
+
     cursor: pointer;
 }
 
-#lorebook-trigger-tracker .lbtt-close:hover {
-    color: #fff;
-    background: var(--lbtt-bg-soft);
+#lorebook-trigger-tracker-panel
+.ltt-content {
+    padding: 8px 10px 12px;
 }
 
-#lorebook-trigger-tracker .lbtt-rule {
-    color: var(--lbtt-muted);
-    font-size: 9px;
-    line-height: 12px;
-    overflow: hidden;
-    white-space: nowrap;
-    margin: 1px 0 8px;
+#lorebook-trigger-tracker-panel
+.ltt-entry {
+    padding: 8px 4px;
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,.07);
 }
 
-#lorebook-trigger-tracker .lbtt-world {
-    margin: 10px 0 6px;
-    color: rgba(255,255,255,.72);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: none;
+#lorebook-trigger-tracker-panel
+.ltt-entry-title {
+    font-weight: 600;
 }
 
-#lorebook-trigger-tracker .lbtt-entry {
-    display: grid;
-    grid-template-columns: 18px minmax(0,1fr);
-    gap: 3px;
-    padding: 6px 7px;
-    margin: 2px 0;
-    border-radius: 8px;
-    background: transparent;
-}
+#lorebook-trigger-tracker-panel
+.ltt-detail {
+    margin-top: 3px;
 
-#lorebook-trigger-tracker .lbtt-entry.is-active {
-    background: rgba(216,107,147,.055);
-}
+    padding-left: 17px;
 
-#lorebook-trigger-tracker .lbtt-status {
-    font-size: 13px;
-    line-height: 17px;
-    text-align: center;
-}
+    color: #aaa;
 
-#lorebook-trigger-tracker .is-active .lbtt-status {
-    color: #a7d6ad;
-}
-
-#lorebook-trigger-tracker .is-inactive .lbtt-status {
-    color: rgba(255,255,255,.30);
-}
-
-#lorebook-trigger-tracker .lbtt-entry-title {
     font-size: 12px;
-    line-height: 17px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-#lorebook-trigger-tracker .lbtt-trigger {
-    margin-top: 1px;
-    color: var(--lbtt-muted);
-    font-size: 10px;
-    line-height: 15px;
-    word-break: break-word;
+#lorebook-trigger-tracker-panel
+.ltt-entry.inactive {
+    opacity: .55;
 }
 
-#lorebook-trigger-tracker .lbtt-uid {
-    color: rgba(255,255,255,.34);
-    font-size: 9px;
-    line-height: 13px;
-}
+#lorebook-trigger-tracker-panel
+.ltt-empty {
+    padding: 16px 8px;
 
-#lorebook-trigger-tracker .lbtt-empty {
-    padding: 16px 4px;
-    color: var(--lbtt-muted);
+    color: #999;
+
     text-align: center;
-    font-size: 11px;
-    line-height: 18px;
-}
-
-#lorebook-trigger-tracker .lbtt-empty small {
-    color: rgba(255,255,255,.32);
-}
-
-@media (max-width: 700px) {
-    #lorebook-trigger-tracker {
-        left: 36px;
-        bottom: 76px;
-    }
-
-    #lorebook-trigger-tracker .lbtt-panel {
-        width: min(330px, calc(100vw - 48px));
-        max-height: 55vh;
-    }
 }
