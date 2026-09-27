@@ -230,22 +230,33 @@ function createUI() {
     // no icon/emoji — plain circle, decorated via CSS only
     bookmark.innerHTML = '';
 
-    document.body.appendChild(bookmark);
+    // true in-row embedding: append into ST's own button row next
+    // to send/mic/attach, so it's a normal flow item — NOT
+    // fixed/absolute, NOT floating, NOT overlapping anything.
+    // it just becomes "one more button" in that row.
+    const buttonRow =
+        document.querySelector('#rightSendForm') ||
+        document.querySelector('#leftSendForm') ||
+        document.querySelector('#send_form');
 
-    // TEMP: hardcoded position, no box-tracking, just to confirm
-    // the circle style itself actually renders
-    bookmark.style.position = 'fixed';
-    bookmark.style.left = '20px';
-    bookmark.style.top = '120px';
+    if (buttonRow) {
+        buttonRow.appendChild(bookmark);
+    } else {
+        document.body.appendChild(bookmark);
+    }
 
-    bookmark.style.width = '36px';
-    bookmark.style.height = '36px';
+    bookmark.style.width = '30px';
+    bookmark.style.height = '30px';
+    bookmark.style.minWidth = '30px';
     bookmark.style.background = 'radial-gradient(circle at 35% 30%, #e07a92, #c0455f 55%, #7a2436)';
-    bookmark.style.boxShadow = '0 3px 10px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.15)';
+    bookmark.style.boxShadow = 'inset 0 0 0 1px rgba(255,255,255,.15)';
     bookmark.style.borderRadius = '50%';
     bookmark.style.border = '2px solid rgba(255,255,255,.35)';
     bookmark.style.padding = '0';
-    bookmark.style.zIndex = '2147483647';
+    bookmark.style.margin = '0 4px';
+    bookmark.style.flexShrink = '0';
+    bookmark.style.alignSelf = 'center';
+    bookmark.style.cursor = 'pointer';
 
 
     const menu = document.createElement('div');
