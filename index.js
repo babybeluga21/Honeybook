@@ -2,19 +2,21 @@ const EXT_ID = 'lorebook-trigger-tracker';
 
 let activatedEntries = [];
 
-/* =========================
+
+/* =========================================================
    Utility
-========================= */
+========================================================= */
 
 function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, c => ({
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
         '&': '&amp;',
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
         "'": '&#039;',
-    }[c]));
+    }[char]));
 }
+
 
 function getName(entry) {
     return (
@@ -25,6 +27,7 @@ function getName(entry) {
     );
 }
 
+
 function getKeys(entry) {
     const key = entry?.key;
 
@@ -32,7 +35,7 @@ function getKeys(entry) {
         return key;
     }
 
-    if (key) {
+    if (key !== undefined && key !== null && key !== '') {
         return [String(key)];
     }
 
@@ -40,35 +43,45 @@ function getKeys(entry) {
 }
 
 
-/* =========================
+/* =========================================================
    Create UI
-========================= */
+========================================================= */
 
 function createUI() {
 
-    // ป้องกันสร้างซ้ำ
+    // ถ้ามีอยู่แล้ว ไม่สร้างซ้ำ
     if (document.getElementById(`${EXT_ID}-bookmark`)) {
         return;
     }
 
-    /* ---------- Bookmark ---------- */
+
+    /* =====================================================
+       BOOKMARK BUTTON
+    ===================================================== */
 
     const bookmark = document.createElement('button');
 
     bookmark.id = `${EXT_ID}-bookmark`;
     bookmark.type = 'button';
-    bookmark.title = 'Lorebook Tools';
-    bookmark.setAttribute('aria-label', 'Lorebook Tools');
 
-    // ใส่สัญลักษณ์ให้เห็นแน่นอน
+    bookmark.title = 'Lorebook Tools';
+    bookmark.setAttribute(
+        'aria-label',
+        'Lorebook Tools'
+    );
+
     bookmark.innerHTML = `
-        <span class="ltt-bookmark-icon">🔖</span>
+        <span class="ltt-bookmark-icon">
+            🔖
+        </span>
     `;
 
     document.body.appendChild(bookmark);
 
 
-    /* ---------- Tool Menu ---------- */
+    /* =====================================================
+       TOOL MENU
+    ===================================================== */
 
     const menu = document.createElement('div');
 
@@ -84,25 +97,36 @@ function createUI() {
             class="ltt-tool"
             id="${EXT_ID}-lorebook"
         >
+
             <span class="ltt-tool-symbol">
                 ◉<sup>0</sup>
             </span>
 
             <span class="ltt-tool-text">
-                <strong>LOREBOOK</strong>
-                <small>Trigger Tracker</small>
+
+                <strong>
+                    LOREBOOK
+                </strong>
+
+                <small>
+                    Trigger Tracker
+                </small>
+
             </span>
 
             <span class="ltt-arrow">
                 ›
             </span>
+
         </button>
     `;
 
     document.body.appendChild(menu);
 
 
-    /* ---------- Lorebook Panel ---------- */
+    /* =====================================================
+       LOREBOOK PANEL
+    ===================================================== */
 
     const panel = document.createElement('div');
 
@@ -137,106 +161,155 @@ function createUI() {
     document.body.appendChild(panel);
 
 
-    /* =========================
-       Events
-    ========================= */
+    /* =====================================================
+       BOOKMARK CLICK
+    ===================================================== */
 
     bookmark.addEventListener('click', (event) => {
 
         event.stopPropagation();
 
-        panel.classList.remove('ltt-open');
+        panel.classList.remove(
+            'ltt-open'
+        );
 
-        menu.classList.toggle('ltt-open');
+        menu.classList.toggle(
+            'ltt-open'
+        );
 
     });
 
 
+    /* =====================================================
+       LOREBOOK CLICK
+    ===================================================== */
+
     const lorebookButton =
-        document.getElementById(`${EXT_ID}-lorebook`);
+        document.getElementById(
+            `${EXT_ID}-lorebook`
+        );
 
     if (lorebookButton) {
 
-        lorebookButton.addEventListener('click', (event) => {
+        lorebookButton.addEventListener(
+            'click',
+            (event) => {
 
-            event.stopPropagation();
+                event.stopPropagation();
 
-            menu.classList.remove('ltt-open');
+                menu.classList.remove(
+                    'ltt-open'
+                );
 
-            panel.classList.add('ltt-open');
+                panel.classList.add(
+                    'ltt-open'
+                );
 
-            renderPanel();
+                renderPanel();
 
-        });
+            }
+        );
 
     }
 
 
+    /* =====================================================
+       CLOSE PANEL
+    ===================================================== */
+
     const closeButton =
-        panel.querySelector('.ltt-close');
+        panel.querySelector(
+            '.ltt-close'
+        );
 
     if (closeButton) {
 
-        closeButton.addEventListener('click', () => {
+        closeButton.addEventListener(
+            'click',
+            () => {
 
-            panel.classList.remove('ltt-open');
+                panel.classList.remove(
+                    'ltt-open'
+                );
 
-        });
+            }
+        );
 
     }
 
 
-    /* ---------- Click outside ---------- */
+    /* =====================================================
+       CLICK OUTSIDE
+    ===================================================== */
 
-    document.addEventListener('click', (event) => {
+    document.addEventListener(
+        'click',
+        (event) => {
 
-        if (
-            !menu.contains(event.target) &&
-            !bookmark.contains(event.target)
-        ) {
-            menu.classList.remove('ltt-open');
+            if (
+                !menu.contains(event.target) &&
+                !bookmark.contains(event.target)
+            ) {
+
+                menu.classList.remove(
+                    'ltt-open'
+                );
+
+            }
+
         }
-
-    });
+    );
 
 }
 
 
-/* =========================
-   Counter
-========================= */
+/* =========================================================
+   UPDATE COUNTER
+========================================================= */
 
 function updateCount() {
 
-    const counter = document.querySelector(
-        `#${EXT_ID}-lorebook sup`
-    );
+    const counter =
+        document.querySelector(
+            `#${EXT_ID}-lorebook sup`
+        );
 
     if (!counter) {
         return;
     }
 
+
+    const count =
+        activatedEntries.length;
+
+
     counter.textContent =
-        activatedEntries.length > 99
+        count > 99
             ? '99+'
-            : String(activatedEntries.length);
+            : String(count);
+
 }
 
 
-/* =========================
-   Render Panel
-========================= */
+/* =========================================================
+   RENDER PANEL
+========================================================= */
 
 function renderPanel() {
 
-    const content = document.querySelector(
-        `#${EXT_ID}-panel .ltt-content`
-    );
+    const content =
+        document.querySelector(
+            `#${EXT_ID}-panel .ltt-content`
+        );
 
     if (!content) {
         return;
     }
 
+
+    /* -----------------------------------------------------
+       NOTHING ACTIVATED
+    ----------------------------------------------------- */
 
     if (!activatedEntries.length) {
 
@@ -250,27 +323,35 @@ function renderPanel() {
     }
 
 
+    /* -----------------------------------------------------
+       RENDER ENTRIES
+    ----------------------------------------------------- */
+
     content.innerHTML =
         activatedEntries
-            .map(entry => {
+            .map((entry) => {
 
                 const name =
                     escapeHtml(
                         getName(entry)
                     );
 
+
                 const keys =
                     getKeys(entry);
+
 
                 const trigger =
                     escapeHtml(
                         keys.join('", "')
                     );
 
+
                 const uid =
                     escapeHtml(
                         entry?.uid ?? '?'
                     );
+
 
                 return `
                     <div class="ltt-entry">
@@ -285,7 +366,8 @@ function renderPanel() {
                         </div>
 
                         <div class="ltt-detail">
-                            Entry: #${uid}
+                            Entry:
+                            #${uid}
                         </div>
 
                     </div>
@@ -293,12 +375,13 @@ function renderPanel() {
 
             })
             .join('');
+
 }
 
 
-/* =========================
-   World Info Event
-========================= */
+/* =========================================================
+   WORLD INFO ACTIVATED
+========================================================= */
 
 function onActivated(data) {
 
@@ -308,11 +391,23 @@ function onActivated(data) {
     );
 
 
+    /* -----------------------------------------------------
+       CASE 1
+       Event ส่ง array มาโดยตรง
+    ----------------------------------------------------- */
+
     if (Array.isArray(data)) {
 
-        activatedEntries = data;
+        activatedEntries =
+            data;
 
     }
+
+
+    /* -----------------------------------------------------
+       CASE 2
+       Event ส่ง object ที่มี allActivatedEntries
+    ----------------------------------------------------- */
 
     else if (
         Array.isArray(
@@ -325,6 +420,11 @@ function onActivated(data) {
 
     }
 
+
+    /* -----------------------------------------------------
+       UNKNOWN FORMAT
+    ----------------------------------------------------- */
+
     else {
 
         activatedEntries = [];
@@ -333,38 +433,76 @@ function onActivated(data) {
 
 
     updateCount();
+
     renderPanel();
 
 }
 
 
-/* =========================
-   Connect SillyTavern Events
-========================= */
+/* =========================================================
+   CONNECT SILLYTAVERN EVENTS
+========================================================= */
 
 function connectEvents() {
 
     try {
 
+        /* -------------------------------------------------
+           CHECK SILLYTAVERN
+        ------------------------------------------------- */
+
         if (
-            typeof SillyTavern === 'undefined' ||
-            typeof SillyTavern.getContext !== 'function'
+            typeof SillyTavern === 'undefined'
         ) {
 
             console.warn(
-                '[Lorebook Trigger Tracker] SillyTavern context unavailable.'
+                '[Lorebook Trigger Tracker] SillyTavern is unavailable.'
             );
 
             return;
         }
 
 
+        /* -------------------------------------------------
+           CHECK getContext
+        ------------------------------------------------- */
+
+        if (
+            typeof SillyTavern.getContext !==
+            'function'
+        ) {
+
+            console.warn(
+                '[Lorebook Trigger Tracker] getContext() is unavailable.'
+            );
+
+            return;
+        }
+
+
+        /* -------------------------------------------------
+           GET CONTEXT
+        ------------------------------------------------- */
+
         const context =
             SillyTavern.getContext();
 
 
+        if (!context) {
+
+            console.warn(
+                '[Lorebook Trigger Tracker] Context unavailable.'
+            );
+
+            return;
+        }
+
+
+        /* -------------------------------------------------
+           CHECK EVENT SYSTEM
+        ------------------------------------------------- */
+
         if (
-            !context ||
             !context.eventSource ||
             !context.event_types
         ) {
@@ -377,19 +515,29 @@ function connectEvents() {
         }
 
 
+        /* -------------------------------------------------
+           WORLD INFO EVENT
+        ------------------------------------------------- */
+
         const event =
-            context.event_types.WORLD_INFO_ACTIVATED;
+            context
+                .event_types
+                .WORLD_INFO_ACTIVATED;
 
 
         if (!event) {
 
             console.warn(
-                '[Lorebook Trigger Tracker] WORLD_INFO_ACTIVATED not found.'
+                '[Lorebook Trigger Tracker] WORLD_INFO_ACTIVATED event not found.'
             );
 
             return;
         }
 
+
+        /* -------------------------------------------------
+           CONNECT
+        ------------------------------------------------- */
 
         context.eventSource.on(
             event,
@@ -415,9 +563,9 @@ function connectEvents() {
 }
 
 
-/* =========================
-   SillyTavern Extension Hook
-========================= */
+/* =========================================================
+   INITIALIZE
+========================================================= */
 
 function init() {
 
@@ -426,10 +574,23 @@ function init() {
     );
 
 
+    /* -----------------------------------------------------
+       CREATE UI
+    ----------------------------------------------------- */
+
     createUI();
+
+
+    /* -----------------------------------------------------
+       CONNECT EVENTS
+    ----------------------------------------------------- */
 
     connectEvents();
 
+
+    /* -----------------------------------------------------
+       DONE
+    ----------------------------------------------------- */
 
     console.log(
         '[Lorebook Trigger Tracker] Ready.'
