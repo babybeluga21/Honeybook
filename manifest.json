@@ -4,8 +4,7 @@
   "requires": [],
   "optional": [],
   "js": "index.js",
-  "css": "ltt-style.css",
   "author": "Rin",
-  "version": "0.3.0",
-  "homePage": "https://github.com/"
+  "version": "0.7.1",
+  "homePage": "https://github.com/babybeluga21/Honeybook"
 }
