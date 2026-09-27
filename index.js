@@ -48,26 +48,25 @@ function injectStyles() {
     style.textContent = `
 #lorebook-trigger-tracker-bookmark {
     position: fixed;
-    left: 10px;
-    bottom: 82px;
-    width: 34px;
-    height: 42px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
     padding: 0;
-    border: 0;
+    border: 4px solid yellow;
     border-radius: 5px 5px 2px 2px;
-    background: rgba(20,20,24,.72);
-    color: #eee;
-    z-index: 2147483646;
+    background: red;
+    color: #fff;
+    z-index: 2147483647;
     cursor: pointer;
     box-shadow: 0 3px 12px rgba(0,0,0,.35);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
 }
 
 #lorebook-trigger-tracker-bookmark .ltt-bookmark-icon {
     display: block;
-    font-size: 17px;
-    line-height: 34px;
+    font-size: 60px;
+    line-height: 112px;
     text-align: center;
 }
 
@@ -230,11 +229,29 @@ function createUI() {
 
     bookmark.innerHTML = `
         <span class="ltt-bookmark-icon">
-            ◉
+            🔥
         </span>
     `;
 
     document.body.appendChild(bookmark);
+
+    // TEMP TEST: force center-screen placement via direct inline
+    // style (bypasses the <style> tag entirely, same technique
+    // that successfully rendered the red test box earlier)
+    bookmark.style.position = 'fixed';
+    bookmark.style.top = '50%';
+    bookmark.style.left = '50%';
+    bookmark.style.transform = 'translate(-50%, -50%)';
+    bookmark.style.width = '90px';
+    bookmark.style.height = '90px';
+    bookmark.style.fontSize = '48px';
+    bookmark.style.background = 'red';
+    bookmark.style.display = 'flex';
+    bookmark.style.alignItems = 'center';
+    bookmark.style.justifyContent = 'center';
+    bookmark.style.zIndex = '2147483647';
+    bookmark.style.borderRadius = '50%';
+    bookmark.style.border = '4px solid yellow';
 
 
     const menu = document.createElement('div');
