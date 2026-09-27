@@ -358,6 +358,28 @@ function safeInit() {
     try {
         init();
 
+        // check whether the browser ever loaded a stylesheet
+        // pointing at this extension's style.css at all
+        const sheets = Array.from(document.styleSheets);
+        const ours = sheets.filter(s => (s.href || '').includes(EXT_ID));
+
+        if (ours.length === 0) {
+            const allHrefs = sheets
+                .map(s => s.href || '(inline)')
+                .join('\n');
+
+            alert(
+                'STYLE.CSS NOT LOADED ❌\n' +
+                'No stylesheet with "' + EXT_ID + '" in its URL was found.\n\n' +
+                'All loaded stylesheets:\n' + allHrefs
+            );
+        } else {
+            alert(
+                'STYLE.CSS FOUND ✅\n' +
+                ours.map(s => s.href).join('\n')
+            );
+        }
+
         const el = document.getElementById(`${EXT_ID}-bookmark`);
 
         if (!el) {
