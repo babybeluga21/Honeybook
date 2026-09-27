@@ -1,12 +1,14 @@
 {
   "display_name": "Lorebook Trigger Tracker",
-  "loading_order": 100,
+  "loading_order": 10,
   "requires": [],
   "optional": [],
   "js": "index.js",
   "css": "style.css",
-  "author": "Custom extension",
-  "version": "0.1.0",
+  "author": "Rin",
+  "version": "0.1.1",
   "homePage": "https://github.com/",
-  "auto_update": false
+  "hooks": {
+    "activate": "init"
+  }
 }
