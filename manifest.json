@@ -1,13 +1,11 @@
 {
-    "display_name": "Lorebook Trigger Tracker",
-    "loading_order": 10,
-    "requires": [],
-    "optional": [],
-    "js": "index.js",
-    "author": "Rin",
-    "version": "0.6.0",
-    "homePage": "https://github.com/babybeluga21/Honeybook",
-    "hooks": {
-        "activate": "init"
-    }
+  "display_name": "Lorebook Trigger Tracker",
+  "loading_order": 10,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Rin",
+  "version": "0.3.0",
+  "homePage": "https://github.com/"
 }
