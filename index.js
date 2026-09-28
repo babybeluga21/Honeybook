@@ -75,16 +75,21 @@ function createToolbarButton(toolbar) {
     button.id = BUTTON_ID;
     button.className = 'fa-solid fa-bookmark interactable';
     button.title = 'Lorebook Trigger Tracker';
-    button.setAttribute('aria-label', 'Lorebook Trigger Tracker');
+    button.setAttribute(
+        'aria-label',
+        'Lorebook Trigger Tracker'
+    );
     button.tabIndex = 0;
 
     button.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
 
-        console.log(`[${EXT_ID}] Toolbar button clicked`);
+        console.log(
+            `[${EXT_ID}] Toolbar button clicked`
+        );
 
-        // เมนู Lorebook จะใส่ตรงนี้ในขั้นต่อไป
+        // Lorebook menu will be added here next.
     });
 
     button.addEventListener('keydown', (event) => {
@@ -94,19 +99,24 @@ function createToolbarButton(toolbar) {
         }
     });
 
-    const optionsButton = toolbar.querySelector('#options_button');
+    /*
+     * Put the Lorebook tool at the end of the
+     * left composer toolbar.
+     *
+     * This keeps it after the existing tools
+     * and immediately before the text area.
+     */
+    toolbar.appendChild(button);
 
-    if (optionsButton) {
-        optionsButton.insertAdjacentElement('afterend', button);
-    } else {
-        toolbar.prepend(button);
-    }
-
-    console.log(`[${EXT_ID}] Native composer tool inserted`);
+    console.log(
+        `[${EXT_ID}] Native composer tool inserted`
+    );
 }
 
 export async function init() {
-    console.log(`[${EXT_ID}] init()`);
+    console.log(
+        `[${EXT_ID}] init()`
+    );
 
     if (initialized) {
         return;
