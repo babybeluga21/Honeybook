@@ -4,7 +4,12 @@
   "requires": [],
   "optional": [],
   "js": "index.js",
+  "css": "",
   "author": "Rin",
-  "version": "0.7.1",
-  "homePage": "https://github.com/babybeluga21/Honeybook"
+  "version": "0.8.0",
+  "homePage": "https://github.com/babybeluga21/Honeybook",
+  "minimum_client_version": "1.18.0",
+  "hooks": {
+    "activate": "init"
+  }
 }
