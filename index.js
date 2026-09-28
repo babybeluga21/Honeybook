@@ -1,12 +1,12 @@
 const EXT_ID = 'lorebook-trigger-tracker';
-const BUTTON_ID = `${EXT_ID}-bookmark`;
+const BUTTON_ID = `${EXT_ID}-button`;
 
 let initialized = false;
 let observer = null;
 let retryTimer = null;
 
-function findSendForm() {
-    return document.querySelector('#send_form');
+function findToolbar() {
+    return document.querySelector('#leftSendForm');
 }
 
 function stopWaiting() {
@@ -21,15 +21,15 @@ function stopWaiting() {
     }
 }
 
-function waitForSendForm() {
+function waitForToolbar() {
     if (initialized) {
         return;
     }
 
-    const sendForm = findSendForm();
+    const toolbar = findToolbar();
 
-    if (sendForm) {
-        createBookmark(sendForm);
+    if (toolbar) {
+        createToolbarButton(toolbar);
         initialized = true;
         stopWaiting();
         return;
@@ -37,15 +37,10 @@ function waitForSendForm() {
 
     if (!observer) {
         observer = new MutationObserver(() => {
-            if (initialized) {
-                stopWaiting();
-                return;
-            }
+            const currentToolbar = findToolbar();
 
-            const form = findSendForm();
-
-            if (form) {
-                createBookmark(form);
+            if (currentToolbar) {
+                createToolbarButton(currentToolbar);
                 initialized = true;
                 stopWaiting();
             }
@@ -53,21 +48,16 @@ function waitForSendForm() {
 
         observer.observe(document.documentElement, {
             childList: true,
-            subtree: true
+            subtree: true,
         });
     }
 
     if (!retryTimer) {
         retryTimer = setInterval(() => {
-            if (initialized) {
-                stopWaiting();
-                return;
-            }
+            const currentToolbar = findToolbar();
 
-            const form = findSendForm();
-
-            if (form) {
-                createBookmark(form);
+            if (currentToolbar) {
+                createToolbarButton(currentToolbar);
                 initialized = true;
                 stopWaiting();
             }
@@ -75,74 +65,44 @@ function waitForSendForm() {
     }
 }
 
-function createBookmark(sendForm) {
+function createToolbarButton(toolbar) {
     if (document.getElementById(BUTTON_ID)) {
         return;
     }
 
-    const position = getComputedStyle(sendForm).position;
+    const button = document.createElement('div');
 
-    if (position === 'static') {
-        sendForm.style.position = 'relative';
-    }
+    button.id = BUTTON_ID;
+    button.className = 'fa-solid fa-bookmark interactable';
+    button.title = 'Lorebook Trigger Tracker';
+    button.setAttribute('aria-label', 'Lorebook Trigger Tracker');
+    button.tabIndex = 0;
 
-    const bookmark = document.createElement('button');
-
-    bookmark.id = BUTTON_ID;
-    bookmark.type = 'button';
-    bookmark.setAttribute(
-        'aria-label',
-        'Lorebook Trigger Tracker'
-    );
-    bookmark.title = 'Lorebook Trigger Tracker';
-    bookmark.textContent = '🔖';
-
-    Object.assign(bookmark.style, {
-        position: 'absolute',
-        right: '62px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: '44px',
-        height: '44px',
-        padding: '0',
-        margin: '0',
-        border: '0',
-        outline: 'none',
-        borderRadius: '10px',
-        background: '#b83f5b',
-        color: '#fff',
-        fontSize: '23px',
-        lineHeight: '1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        zIndex: '99999',
-        boxSizing: 'border-box'
-    });
-
-    bookmark.addEventListener('mouseenter', () => {
-        bookmark.style.filter = 'brightness(1.15)';
-    });
-
-    bookmark.addEventListener('mouseleave', () => {
-        bookmark.style.filter = 'none';
-    });
-
-    bookmark.addEventListener('click', (event) => {
+    button.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
 
-        console.log(
-            `[${EXT_ID}] Bookmark clicked`
-        );
+        console.log(`[${EXT_ID}] Toolbar button clicked`);
+
+        // เมนู Lorebook จะใส่ตรงนี้ในขั้นต่อไป
     });
 
-    sendForm.appendChild(bookmark);
+    button.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            button.click();
+        }
+    });
 
-    console.log(
-        `[${EXT_ID}] Bookmark inserted inside #send_form`
-    );
+    const optionsButton = toolbar.querySelector('#options_button');
+
+    if (optionsButton) {
+        optionsButton.insertAdjacentElement('afterend', button);
+    } else {
+        toolbar.prepend(button);
+    }
+
+    console.log(`[${EXT_ID}] Native composer tool inserted`);
 }
 
 export async function init() {
@@ -152,5 +112,5 @@ export async function init() {
         return;
     }
 
-    waitForSendForm();
+    waitForToolbar();
 }
