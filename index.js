@@ -1,144 +1,105 @@
 const EXT_ID = 'lorebook-trigger-tracker';
 const BUTTON_ID = `${EXT_ID}-button`;
-const STYLE_ID = `${EXT_ID}-style`;
 
 let initialized = false;
 let toolbarObserver = null;
 let retryTimer = null;
 let moveQueued = false;
-let personaListenerBound = false;
+let personaObserver = null;
 
 function findToolbar() {
     return document.querySelector('#leftSendForm');
 }
 
-function stopWaiting() {
-    if (retryTimer) {
-        clearInterval(retryTimer);
-        retryTimer = null;
+function getPersonaImage() {
+    // SillyTavern แสดง Persona ปัจจุบันไว้ใน UI นี้
+    const avatar =
+        document.querySelector('#user_avatar_block img') ||
+        document.querySelector('#user_avatar_block .avatar img') ||
+        document.querySelector('#persona_ui img');
+
+    return avatar?.src || '';
+}
+
+function updatePersonaImage(button) {
+    if (!button) return;
+
+    const image = button.querySelector('.ltt-persona-image');
+    const fallback = button.querySelector('.ltt-fallback');
+
+    const src = getPersonaImage();
+
+    if (src) {
+        image.src = src;
+        image.style.display = 'block';
+        fallback.style.display = 'none';
+    } else {
+        image.removeAttribute('src');
+        image.style.display = 'none';
+        fallback.style.display = 'flex';
     }
 }
 
 function addStyles() {
-    if (document.getElementById(STYLE_ID)) {
+    if (document.getElementById(`${EXT_ID}-style`)) {
         return;
     }
 
     const style = document.createElement('style');
-
-    style.id = STYLE_ID;
+    style.id = `${EXT_ID}-style`;
 
     style.textContent = `
         #${BUTTON_ID} {
-            width: 32px;
-            height: 32px;
-            min-width: 32px;
-            min-height: 32px;
-            padding: 0;
-            margin: 0;
-            border-radius: 50%;
-            overflow: hidden;
+            order: 9999 !important;
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            min-height: 32px !important;
+            padding: 0 !important;
+            margin: 0 3px !important;
+
+            border-radius: 50% !important;
+            overflow: hidden !important;
+
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+
+            cursor: pointer;
             position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            flex: 0 0 32px;
+            box-sizing: border-box;
+
+            background: rgba(0, 0, 0, 0.25) !important;
+            border: 1px solid rgba(255,255,255,.18);
+
+            font-family: inherit;
+            font-size: 16px;
         }
 
-        #${BUTTON_ID} img {
-            width: 100%;
-            height: 100%;
+        #${BUTTON_ID} .ltt-persona-image {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
             display: block;
-            object-fit: cover;
             border-radius: 50%;
             pointer-events: none;
-            user-select: none;
         }
 
-        #${BUTTON_ID} .lorebook-trigger-tracker-fallback {
-            font-size: 16px;
-            line-height: 1;
+        #${BUTTON_ID} .ltt-fallback {
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            font-size: 15px;
+        }
+
+        #${BUTTON_ID}:hover {
+            filter: brightness(1.15);
         }
     `;
 
     document.head.appendChild(style);
-}
-
-function getPersonaImageUrl() {
-    const avatar =
-        window.user_avatar ??
-        window.userAvatar ??
-        '';
-
-    if (!avatar || avatar === 'none') {
-        return '';
-    }
-
-    return `User%20Avatars/${encodeURIComponent(avatar)}`;
-}
-
-function updatePersonaImage() {
-    const button = document.getElementById(BUTTON_ID);
-
-    if (!button) {
-        return;
-    }
-
-    const url = getPersonaImageUrl();
-
-    const oldImage = button.querySelector('img');
-
-    if (oldImage) {
-        oldImage.remove();
-    }
-
-    if (!url) {
-        button.innerHTML =
-            '<span class="lorebook-trigger-tracker-fallback">🔖</span>';
-
-        return;
-    }
-
-    const image = document.createElement('img');
-
-    image.alt = '';
-    image.draggable = false;
-    image.src = url;
-
-    image.addEventListener(
-        'error',
-        () => {
-            image.remove();
-
-            button.innerHTML =
-                '<span class="lorebook-trigger-tracker-fallback">🔖</span>';
-        },
-        { once: true }
-    );
-
-    button.innerHTML = '';
-    button.appendChild(image);
-}
-
-function bindPersonaChange() {
-    if (personaListenerBound) {
-        return;
-    }
-
-    personaListenerBound = true;
-
-    if (
-        window.eventSource &&
-        window.event_types?.PERSONA_CHANGED
-    ) {
-        window.eventSource.on(
-            window.event_types.PERSONA_CHANGED,
-            () => {
-                updatePersonaImage();
-            }
-        );
-    }
 }
 
 function placeButtonLast(toolbar, button) {
@@ -186,51 +147,68 @@ function watchToolbar(toolbar, button) {
     });
 }
 
+function watchPersona(button) {
+    if (personaObserver) {
+        personaObserver.disconnect();
+    }
+
+    personaObserver = new MutationObserver(() => {
+        updatePersonaImage(button);
+    });
+
+    personaObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['src'],
+    });
+
+    // ตรวจซ้ำเผื่อ Persona เปลี่ยนผ่าน event/UI
+    setInterval(() => {
+        updatePersonaImage(button);
+    }, 1000);
+}
+
 function createToolbarButton(toolbar) {
     let button = document.getElementById(BUTTON_ID);
 
     if (button) {
         placeButtonLast(toolbar, button);
-        updatePersonaImage();
+        updatePersonaImage(button);
         watchToolbar(toolbar, button);
-
         return button;
     }
 
+    addStyles();
+
     button = document.createElement('div');
-
     button.id = BUTTON_ID;
-
     button.className = 'interactable';
-
-    button.title =
-        'Lorebook Trigger Tracker';
-
-    button.setAttribute(
-        'aria-label',
-        'Lorebook Trigger Tracker'
-    );
-
+    button.title = 'Lorebook Trigger Tracker';
+    button.setAttribute('aria-label', 'Lorebook Trigger Tracker');
     button.tabIndex = 0;
+
+    const image = document.createElement('img');
+    image.className = 'ltt-persona-image';
+    image.alt = '';
+    image.draggable = false;
+
+    const fallback = document.createElement('div');
+    fallback.className = 'ltt-fallback';
+    fallback.textContent = '◉';
+
+    button.appendChild(image);
+    button.appendChild(fallback);
 
     button.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
 
-        console.log(
-            `[${EXT_ID}] Lorebook button clicked`
-        );
-
-        /*
-         * Lorebook menu will be added here.
-         */
+        console.log(`[${EXT_ID}] Lorebook button clicked`);
     });
 
     button.addEventListener('keydown', (event) => {
-        if (
-            event.key === 'Enter' ||
-            event.key === ' '
-        ) {
+        if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             button.click();
         }
@@ -239,14 +217,11 @@ function createToolbarButton(toolbar) {
     toolbar.appendChild(button);
 
     placeButtonLast(toolbar, button);
-
-    updatePersonaImage();
-
+    updatePersonaImage(button);
     watchToolbar(toolbar, button);
+    watchPersona(button);
 
-    console.log(
-        `[${EXT_ID}] Persona avatar composer tool inserted`
-    );
+    console.log(`[${EXT_ID}] Persona tool inserted`);
 
     return button;
 }
@@ -259,14 +234,9 @@ function waitForToolbar() {
     const toolbar = findToolbar();
 
     if (toolbar) {
-        addStyles();
-
         createToolbarButton(toolbar);
-
         initialized = true;
-
         stopWaiting();
-
         return;
     }
 
@@ -275,23 +245,16 @@ function waitForToolbar() {
             const currentToolbar = findToolbar();
 
             if (currentToolbar) {
-                addStyles();
-
                 createToolbarButton(currentToolbar);
-
                 initialized = true;
-
                 stopWaiting();
             }
         });
 
-        toolbarObserver.observe(
-            document.documentElement,
-            {
-                childList: true,
-                subtree: true,
-            }
-        );
+        toolbarObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+        });
     }
 
     if (!retryTimer) {
@@ -299,27 +262,27 @@ function waitForToolbar() {
             const currentToolbar = findToolbar();
 
             if (currentToolbar) {
-                addStyles();
-
                 createToolbarButton(currentToolbar);
-
                 initialized = true;
-
                 stopWaiting();
             }
         }, 500);
     }
 }
 
+function stopWaiting() {
+    if (retryTimer) {
+        clearInterval(retryTimer);
+        retryTimer = null;
+    }
+}
+
 export async function init() {
-    console.log(
-        `[${EXT_ID}] init()`
-    );
+    console.log(`[${EXT_ID}] init()`);
 
     if (initialized) {
         return;
     }
 
     waitForToolbar();
-    bindPersonaChange();
 }
