@@ -17,7 +17,6 @@ function addStyles() {
     }
 
     const style = document.createElement('style');
-
     style.id = `${EXT_ID}-style`;
 
     style.textContent = `
@@ -45,16 +44,14 @@ function addStyles() {
             justify-content: center !important;
 
             position: relative !important;
-
             box-sizing: border-box !important;
 
             cursor: pointer;
 
-            background:
-                rgba(0, 0, 0, .25) !important;
+            background: rgba(255,255,255,.045) !important;
 
             border:
-                1px solid rgba(255,255,255,.16) !important;
+                1px solid rgba(255,255,255,.14) !important;
 
             transition:
                 filter .15s ease,
@@ -65,6 +62,9 @@ function addStyles() {
 
         #${BUTTON_ID}:hover {
             filter: brightness(1.12);
+
+            box-shadow:
+                0 0 8px rgba(255,255,255,.08);
         }
 
 
@@ -75,8 +75,8 @@ function addStyles() {
 
         #${BUTTON_ID}.ltt-active {
             box-shadow:
-                0 0 0 1px rgba(255,255,255,.18),
-                0 0 10px rgba(255,255,255,.10);
+                0 0 0 1px rgba(255,255,255,.16),
+                0 0 12px rgba(255,255,255,.10);
         }
 
 
@@ -106,14 +106,14 @@ function addStyles() {
             font-size: 14px;
 
             color:
-                rgba(255,255,255,.75);
+                rgba(255,255,255,.72);
 
             pointer-events: none;
         }
 
 
         /* =====================================================
-         * SMALL CATEGORY PANEL
+         * TRANSPARENT GLASS PANEL
          * ===================================================== */
 
         #${PANEL_ID} {
@@ -129,38 +129,54 @@ function addStyles() {
 
             box-sizing: border-box;
 
+            /*
+             * โปร่งใสเป็นหลัก
+             */
             background:
-                rgba(12, 12, 14, .74);
+                rgba(255,255,255,.055);
 
+            /*
+             * Glass effect
+             */
             backdrop-filter:
-                blur(10px);
+                blur(14px)
+                saturate(120%);
 
             -webkit-backdrop-filter:
-                blur(10px);
+                blur(14px)
+                saturate(120%);
 
+            /*
+             * ขอบบางมาก
+             */
             border:
-                1px solid rgba(255,255,255,.10);
+                1px solid rgba(255,255,255,.14);
 
-            border-radius: 7px;
+            border-radius: 8px;
 
+            /*
+             * เงานุ่ม ๆ
+             */
             box-shadow:
-                0 5px 16px rgba(0,0,0,.25),
-                inset 0 1px rgba(255,255,255,.035);
+                0 6px 20px rgba(0,0,0,.18),
+                inset 0 1px 0 rgba(255,255,255,.07);
 
             z-index: 999999;
 
             opacity: 0;
 
             transform:
-                translateY(3px)
+                translateY(4px)
                 scale(.97);
 
             transform-origin:
                 bottom left;
 
+            pointer-events: none;
+
             transition:
-                opacity .14s ease,
-                transform .14s ease;
+                opacity .16s ease,
+                transform .16s ease;
         }
 
 
@@ -172,6 +188,8 @@ function addStyles() {
             transform:
                 translateY(0)
                 scale(1);
+
+            pointer-events: auto;
         }
 
 
@@ -199,11 +217,14 @@ function addStyles() {
 
             border-radius: 5px;
 
+            /*
+             * ปุ่มด้านในก็โปร่งใส
+             */
             background:
-                rgba(255,255,255,.045);
+                rgba(255,255,255,.035);
 
             color:
-                rgba(255,255,255,.82);
+                rgba(255,255,255,.84);
 
             font-family: inherit;
 
@@ -226,10 +247,10 @@ function addStyles() {
 
         #${PANEL_ID} .ltt-category:hover {
             background:
-                rgba(255,255,255,.09);
+                rgba(255,255,255,.085);
 
             color:
-                rgba(255,255,255,.95);
+                rgba(255,255,255,.98);
         }
 
 
@@ -258,7 +279,7 @@ function addStyles() {
 
 
         /* =====================================================
-         * COUNT BADGE
+         * COUNT
          * ===================================================== */
 
         #${PANEL_ID} .ltt-category-count {
@@ -276,10 +297,10 @@ function addStyles() {
             border-radius: 6px;
 
             background:
-                rgba(255,255,255,.08);
+                rgba(255,255,255,.07);
 
             color:
-                rgba(255,255,255,.62);
+                rgba(255,255,255,.60);
 
             font-size: 8px;
 
@@ -308,7 +329,7 @@ function findSendForm() {
 
 
 /* =========================================================
- * FIND CURRENT PERSONA IMAGE
+ * FIND PERSONA
  * ========================================================= */
 
 function findPersonaImage() {
@@ -331,7 +352,7 @@ function findPersonaImage() {
 
 
 /* =========================================================
- * UPDATE PERSONA IMAGE
+ * UPDATE PERSONA
  * ========================================================= */
 
 function updatePersona(button) {
@@ -343,31 +364,40 @@ function updatePersona(button) {
     }
 
     const image =
-        button.querySelector('.ltt-persona-image');
+        button.querySelector(
+            '.ltt-persona-image'
+        );
 
     const fallback =
-        button.querySelector('.ltt-fallback');
+        button.querySelector(
+            '.ltt-fallback'
+        );
 
     if (!image || !fallback) {
         return;
     }
 
-    const src = findPersonaImage();
+    const src =
+        findPersonaImage();
 
     if (src) {
         if (image.src !== src) {
             image.src = src;
         }
 
-        image.style.display = 'block';
+        image.style.display =
+            'block';
 
-        fallback.style.display = 'none';
+        fallback.style.display =
+            'none';
     } else {
         image.removeAttribute('src');
 
-        image.style.display = 'none';
+        image.style.display =
+            'none';
 
-        fallback.style.display = 'flex';
+        fallback.style.display =
+            'flex';
     }
 }
 
@@ -378,7 +408,9 @@ function updatePersona(button) {
 
 function positionPanel() {
     const panel =
-        document.getElementById(PANEL_ID);
+        document.getElementById(
+            PANEL_ID
+        );
 
     const sendForm =
         findSendForm();
@@ -395,15 +427,14 @@ function positionPanel() {
 
     const margin = 8;
 
-    let left = rect.left;
+    let left =
+        rect.left;
 
     let top =
         rect.top -
         panelRect.height -
         6;
 
-
-    /* Prevent horizontal overflow */
 
     if (
         left + panelRect.width >
@@ -421,8 +452,6 @@ function positionPanel() {
     }
 
 
-    /* Prevent top overflow */
-
     if (top < margin) {
         top = margin;
     }
@@ -437,12 +466,14 @@ function positionPanel() {
 
 
 /* =========================================================
- * CREATE CATEGORY PANEL
+ * CREATE PANEL
  * ========================================================= */
 
 function createPanel() {
     let panel =
-        document.getElementById(PANEL_ID);
+        document.getElementById(
+            PANEL_ID
+        );
 
     if (panel) {
         return panel;
@@ -451,12 +482,11 @@ function createPanel() {
     panel =
         document.createElement('div');
 
-    panel.id = PANEL_ID;
+    panel.id =
+        PANEL_ID;
 
 
-    /* -----------------------------------------------------
-     * Lorebook category
-     * ----------------------------------------------------- */
+    /* Lorebook */
 
     const lorebookButton =
         document.createElement('button');
@@ -478,6 +508,7 @@ function createPanel() {
     lorebookButton.addEventListener(
         'click',
         (event) => {
+
             event.preventDefault();
             event.stopPropagation();
 
@@ -486,8 +517,8 @@ function createPanel() {
             );
 
             /*
-             * ระบบ Lorebook / Trigger
-             * จะต่อเข้าตรงนี้ภายหลัง
+             * ระบบ Lorebook จริง
+             * จะต่อเข้าตรงนี้
              */
         }
     );
@@ -516,7 +547,9 @@ function togglePanel() {
         createPanel();
 
     const button =
-        document.getElementById(BUTTON_ID);
+        document.getElementById(
+            BUTTON_ID
+        );
 
     if (!panel || !button) {
         return;
@@ -537,11 +570,6 @@ function togglePanel() {
         );
 
 
-        /*
-         * รอให้ panel แสดงก่อน
-         * แล้วค่อยคำนวณขนาดจริง
-         */
-
         requestAnimationFrame(() => {
             positionPanel();
         });
@@ -560,16 +588,16 @@ function togglePanel() {
 
 
 /* =========================================================
- * CREATE PERSONA TOOL BUTTON
+ * CREATE BUTTON
  * ========================================================= */
 
 function createButton(toolbar) {
 
     let button =
-        document.getElementById(BUTTON_ID);
+        document.getElementById(
+            BUTTON_ID
+        );
 
-
-    /* Existing button */
 
     if (button) {
 
@@ -610,10 +638,9 @@ function createButton(toolbar) {
     );
 
 
-    button.tabIndex = 0;
+    button.tabIndex =
+        0;
 
-
-    /* Persona image */
 
     const image =
         document.createElement('img');
@@ -621,12 +648,12 @@ function createButton(toolbar) {
     image.className =
         'ltt-persona-image';
 
-    image.alt = '';
+    image.alt =
+        '';
 
-    image.draggable = false;
+    image.draggable =
+        false;
 
-
-    /* Fallback icon */
 
     const fallback =
         document.createElement('div');
@@ -647,8 +674,6 @@ function createButton(toolbar) {
     );
 
 
-    /* Click */
-
     button.addEventListener(
         'click',
         (event) => {
@@ -667,8 +692,6 @@ function createButton(toolbar) {
         }
     );
 
-
-    /* Keyboard */
 
     button.addEventListener(
         'keydown',
@@ -716,7 +739,7 @@ function createButton(toolbar) {
 
 
 /* =========================================================
- * KEEP TOOL AT END OF TOOLBAR
+ * KEEP BUTTON LAST
  * ========================================================= */
 
 function keepButtonAtEnd(
@@ -779,7 +802,7 @@ function watchToolbar(
 
 
 /* =========================================================
- * START TOOLBAR WATCH
+ * START
  * ========================================================= */
 
 function startToolbarWatch() {
@@ -788,14 +811,12 @@ function startToolbarWatch() {
         findToolbar();
 
 
-    /*
-     * Toolbar already exists
-     */
-
     if (toolbar) {
 
         const button =
-            createButton(toolbar);
+            createButton(
+                toolbar
+            );
 
 
         watchToolbar(
@@ -810,11 +831,6 @@ function startToolbarWatch() {
         return;
     }
 
-
-    /*
-     * Wait until SillyTavern
-     * creates the composer
-     */
 
     toolbarObserver =
         new MutationObserver(() => {
@@ -861,7 +877,7 @@ function startToolbarWatch() {
 
 
 /* =========================================================
- * CLOSE PANEL WHEN CLICKING OUTSIDE
+ * CLOSE ON OUTSIDE CLICK
  * ========================================================= */
 
 document.addEventListener(
@@ -918,7 +934,7 @@ document.addEventListener(
 
 
 /* =========================================================
- * KEEP PANEL POSITIONED
+ * WINDOW EVENTS
  * ========================================================= */
 
 window.addEventListener(
@@ -945,7 +961,7 @@ window.addEventListener(
 
 
 /* =========================================================
- * SILLYTAVERN EXTENSION ENTRY
+ * SILLYTAVERN ENTRY
  * ========================================================= */
 
 export async function init() {
