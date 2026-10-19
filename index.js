@@ -33,7 +33,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const DEBUG = true; // ตั้งเป็น false เพื่อปิดกล่องบอกสถานะบนจอ
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
@@ -1197,6 +1197,8 @@ function showToast(text, ms = 5000) {
     toast.textContent = text;
     document.body.appendChild(toast);
 
+    placeTop(toast, Math.max(8, window.innerHeight - 90 - toast.offsetHeight));
+
     setTimeout(() => toast.remove(), ms);
 }
 
@@ -1353,29 +1355,49 @@ function renderSheet() {
     items.forEach(item => list.appendChild(renderCard(item)));
 }
 
-function positionSheet() {
-    const sheet = document.getElementById(SHEET_ID);
-    const target = findTextbox();
+// วางด้วย top แล้ววัดตำแหน่งจริงบนจอ ถ้าเพี้ยน (เช่นมี ancestor ที่ทำให้ fixed
+// อิงกรอบอื่น ไม่ใช่หน้าจอ) ให้ชดเชยส่วนต่างเอง ไม่พึ่งการคำนวณด้วย bottom
+function placeTop(el, desiredTop) {
+    el.style.bottom = 'auto';
+    el.style.top = `${desiredTop}px`;
 
-    if (!sheet || !target) return;
+    const error = desiredTop - el.getBoundingClientRect().top;
 
-    const rect = target.getBoundingClientRect();
-
-    // กล่องข้อความถูกซ่อน (เช่นยังไม่เข้าแชท): ใช้ตำแหน่งเริ่มต้นจาก CSS
-    if (!rect.width || !rect.height) {
-        sheet.style.bottom = '';
-        sheet.style.maxHeight = '';
-        return;
+    if (Math.abs(error) > 1) {
+        el.style.top = `${desiredTop + error}px`;
     }
+}
 
-    // position: fixed อิงความสูง layout viewport (clientHeight) ไม่ใช่ innerHeight
-    // บนมือถือสองค่านี้ต่างกันได้เมื่อแถบ URL/คีย์บอร์ดขยับ
-    const viewH = document.documentElement.clientHeight || window.innerHeight;
-    const bottom = Math.max(8, viewH - rect.top + 14);
-    const room = Math.max(140, rect.top - 24);
+function positionSheet() {
+    if (!sheetOpen) return;
 
-    sheet.style.bottom = `${bottom}px`;
+    const sheet = document.getElementById(SHEET_ID);
+    if (!sheet) return;
+
+    const target = findTextbox();
+    const rect = target ? target.getBoundingClientRect() : null;
+    const hasBox = Boolean(rect && rect.width && rect.height);
+
+    const viewH = window.innerHeight;
+    const gap = 14;
+
+    // กล่องข้อความถูกซ่อน (เช่นยังไม่เข้าแชท): วางเหนือขอบล่างจอ 80px
+    const bottomEdge = hasBox ? rect.top - gap : viewH - 80;
+    const room = Math.max(140, bottomEdge - 8);
+
     sheet.style.maxHeight = `${Math.min(room, viewH * 0.6)}px`;
+
+    // วัดโดยปิดอนิเมชันชั่วคราว ไม่งั้นค่าเพี้ยนระหว่างกำลัง transition
+    const prevTransition = sheet.style.transition;
+    const prevTransform = sheet.style.transform;
+
+    sheet.style.transition = 'none';
+    sheet.style.transform = 'none';
+
+    placeTop(sheet, Math.max(8, bottomEdge - sheet.offsetHeight));
+
+    sheet.style.transform = prevTransform;
+    sheet.style.transition = prevTransition;
 }
 
 function openSheet() {
@@ -1393,7 +1415,15 @@ function openSheet() {
     verifySheet();
 
     const r = sheet.getBoundingClientRect();
-    dbg(`openSheet: pos=${getComputedStyle(sheet).position} rect=${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)}`);
+    const bodyStyle = getComputedStyle(document.body);
+    const bodyRect = document.body.getBoundingClientRect();
+
+    dbg(
+        `openSheet: rect=${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} ` +
+        `inner=${window.innerHeight} client=${document.documentElement.clientHeight} ` +
+        `body=${Math.round(bodyRect.top)}/${Math.round(bodyRect.height)} ` +
+        `tf=${bodyStyle.transform} filter=${bodyStyle.filter} contain=${bodyStyle.contain}`
+    );
 }
 
 // เช็คว่าหน้าต่างขึ้นบนจอจริงไหม ถ้าไม่ขึ้นให้บอกสาเหตุบนจอเลย (มือถือไม่มี devtools)
