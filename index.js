@@ -654,32 +654,6 @@ function positionPanel() {
     }
 }
 
-/*
- * ผูกการแตะแบบกันพลาดบนมือถือ: ใช้ pointerup เป็นหลัก แล้วใช้ click เป็นตัวสำรอง
- * (กัน click ที่ถูกกลืนจาก transform/transition หรือ handler ของ SillyTavern)
- */
-function onTap(element, handler) {
-    let lastPointer = 0;
-
-    element.addEventListener('pointerup', event => {
-        if (event.pointerType === 'mouse' && event.button !== 0) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        lastPointer = Date.now();
-        handler(event);
-    });
-
-    element.addEventListener('click', event => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (Date.now() - lastPointer < 600) return;
-        handler(event);
-    });
-}
-
 function createPanel() {
     let panel = document.getElementById(PANEL_ID);
     if (panel) return panel;
@@ -704,21 +678,21 @@ function createPanel() {
             <span class="ltt-count">${category.count}</span>
         `;
 
-        onTap(item, () => {
-            // ปิดวงตัวเลือกก่อน แล้วค่อยทำงานของตัวเลือกนั้น
-            closePanel();
+        item.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
 
-            // เลื่อนไปรอบถัดไปเล็กน้อย กันชนกับ handler อื่นของหน้าเว็บ
-            setTimeout(() => {
-                try {
-                    if (typeof category.onClick === 'function') {
-                        category.onClick();
-                    }
-                } catch (error) {
-                    console.error(`[${EXT_ID}] ${category.label} error`, error);
-                    showToast(`${category.label}: ${error?.message || error}`);
+            try {
+                // ปิดวงตัวเลือกก่อน แล้วค่อยทำงานของตัวเลือกนั้น
+                closePanel();
+
+                if (typeof category.onClick === 'function') {
+                    category.onClick();
                 }
-            }, 0);
+            } catch (error) {
+                console.error(`[${EXT_ID}] ${category.label} error`, error);
+                showToast(`${category.label}: ${error?.message || error}`);
+            }
         });
 
         panel.appendChild(item);
@@ -767,14 +741,20 @@ function createButton() {
         button.appendChild(spark);
     }
 
-    onTap(button, () => {
+    button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+
         if (sheetOpen) {
             closeSheet();
             return;
         }
 
         togglePanel();
-        button.setAttribute('aria-expanded', String(panelOpen));
+        button.setAttribute(
+            'aria-expanded',
+            String(panelOpen)
+        );
     });
 
     document.body.appendChild(button);
@@ -957,7 +937,7 @@ function trackedIndices() {
     const indices = [];
 
     (ctx?.chat || []).forEach((message, index) => {
-        if (message?.extra?.ltt_triggers) indices.push(index);
+        if (Array.isArray(message?.extra?.ltt_triggers?.items)) indices.push(index);
     });
 
     return indices;
@@ -1213,7 +1193,7 @@ function renderSheet() {
 
     const position = indices.indexOf(viewIndex);
     const data = ctx.chat[viewIndex].extra.ltt_triggers;
-    const items = data.items || [];
+    const items = data.items.filter(item => item && typeof item === 'object');
 
     label.textContent = `#${viewIndex}`;
     prev.disabled = position <= 0;
@@ -1255,17 +1235,11 @@ function openSheet() {
     sheetOpen = true;
     viewIndex = latestTracked();
 
-    try {
-        renderSheet();
-    } catch (error) {
-        console.error(`[${EXT_ID}] renderSheet error`, error);
-        showToast(`Lorebook: ${error?.message || error}`);
-    }
-
-    positionSheet();
-
     sheet.classList.add('ltt-visible');
     button?.classList.add('ltt-active');
+
+    renderSheet();
+    positionSheet();
 }
 
 function closeSheet() {
@@ -1299,15 +1273,4 @@ export async function init() {
     schedulePosition();
 
     console.log(`[${EXT_ID}] Floating orb initialized (trigger sheet v2)`);
-}
-
-// SillyTavern โหลด index.js เฉยๆ ไม่ได้เรียก init() ให้ จึงเรียกเองตรงนี้
-function autoInit() {
-    init().catch(error => console.error(`[${EXT_ID}] init failed`, error));
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', autoInit, { once: true });
-} else {
-    autoInit();
 }
