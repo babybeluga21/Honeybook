@@ -1310,4 +1310,5 @@ export async function init() {
     schedulePosition();
 
     console.log(`[${EXT_ID}] Floating orb initialized (trigger sheet v2)`);
+    showToast('✓ Lorebook Tracker: โหลดไฟล์ใหม่แล้ว (v3-debug)');
 }
