@@ -32,11 +32,14 @@ let positionObserver = null;
 let positionFrame = 0;
 
 let sheetOpen = false;
+let moveMode = false;
+const POS_KEY = `${EXT_ID}-sheet-pos`;
+let customPos = loadPos();
 let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v16';
+const VERSION = 'v17';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -462,31 +465,38 @@ function addStyles() {
         }
     }
 
-    /* ===== แผงแสดงทริกเกอร์ Lorebook ===== */
+    /* ===== หน้าต่างรายการทริกเกอร์ (กรอบซ้อนสองชั้น + แท็บห้อย + ประกาย) ===== */
     #${SHEET_ID} {
         position: fixed;
         left: 8px;
         right: 8px;
         bottom: 80px;
-        max-width: 440px;
-        max-height: 50vh;
+        max-width: 270px;
+        max-height: 38vh;
         margin: 0 auto;
         box-sizing: border-box;
 
         display: flex;
         flex-direction: column;
 
-        background: linear-gradient(90deg, rgba(125,30,52,.6), rgba(30,28,42,.6) 65%);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(225,215,235,.4);
-        border-left: 3px solid #c24a5e;
-        border-radius: 3px;
-        box-shadow: 0 4px 14px rgba(0,0,0,.35);
+        /* พื้นเรียบ ไล่เฉดไวน์แดง → ม่วงเข้ม มีแสงฟุ้งนุ่ม ๆ ที่มุม (ไม่มีลายตาราง) */
+        background-color: #1c1824;
+        background-image:
+            radial-gradient(120% 70% at 100% 0%, rgba(224,120,138,.20), transparent 60%),
+            radial-gradient(90% 60% at 0% 100%, rgba(179,36,63,.26), transparent 65%),
+            linear-gradient(170deg, #5e1730 0%, #2a1a2c 50%, #1a1622 100%);
+
+        border: 1px solid rgba(246,232,226,.55);
+        border-radius: 4px;
+        box-shadow:
+            0 12px 30px rgba(0,0,0,.55),
+            0 0 0 1px rgba(0,0,0,.35),
+            inset 0 1px 0 rgba(246,232,226,.14);
 
         color: #efe7ea;
         font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
-        font-size: 12px;
+        font-size: 10.5px;
+        line-height: 1.45;
 
         z-index: 1000000;
         visibility: hidden;
@@ -503,160 +513,442 @@ function addStyles() {
         pointer-events: auto;
     }
 
-    /* ลูกไม้ขอบบน */
+    /* เส้นในบาง ๆ ซ้อนอีกชั้น */
     #${SHEET_ID}::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 5px;
-        background: radial-gradient(circle at 4px 0, #f5eff2 2.7px, transparent 3px) 0 0/8px 5px repeat-x;
+        inset: 3px;
+        border: 1px solid rgba(224,120,138,.38);
+        border-radius: 2px;
         pointer-events: none;
     }
 
+    /* ข้าวหลามตัดที่มุมกรอบ */
+    #${SHEET_ID} .ltt-corner {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        background: #f6e8e2;
+        box-shadow: 0 0 0 1.5px #1c1824, 0 0 6px rgba(246,232,226,.35);
+        transform: rotate(45deg);
+        pointer-events: none;
+    }
+
+    #${SHEET_ID} .ltt-c-tl { top: -4px; left: -4px; }
+    #${SHEET_ID} .ltt-c-tr { top: -4px; right: -4px; }
+    #${SHEET_ID} .ltt-c-bl { bottom: -4px; left: -4px; }
+    #${SHEET_ID} .ltt-c-br { bottom: -4px; right: -4px; }
+
+    /* ประกายสี่แฉกเกาะขอบ */
+    #${SHEET_ID} .ltt-spk {
+        position: absolute;
+        display: flex;
+        color: #e0788a;
+        pointer-events: none;
+        animation: ltt-sheet-twinkle 2.2s ease-in-out infinite alternate;
+    }
+
+    #${SHEET_ID} .ltt-spk svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    #${SHEET_ID} .ltt-spk-a { width: 13px; height: 13px; top: -9px; right: 22px; color: #f6e8e2; }
+    #${SHEET_ID} .ltt-spk-b { width: 8px;  height: 8px;  bottom: -6px; left: 30px; animation-delay: 1.1s; }
+    #${SHEET_ID} .ltt-spk-c { width: 6px;  height: 6px;  top: -5px; right: 46px; animation-delay: .5s; }
+
+    @keyframes ltt-sheet-twinkle {
+        from { transform: scale(.6); opacity: .55; }
+        to   { transform: scale(1);  opacity: 1; }
+    }
+
+    @keyframes ltt-card-in {
+        from { opacity: 0; transform: translateY(5px); }
+        to   { opacity: 1; transform: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #${SHEET_ID} .ltt-spk,
+        #${SHEET_ID} .ltt-card { animation: none; }
+    }
+
+    /* แท็บครีมห้อยคาบขอบบน */
+    #${SHEET_ID} .ltt-title {
+        position: absolute;
+        top: -10px;
+        left: 16px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 1px 11px 1px 8px;
+        background: linear-gradient(180deg, #fbefe9, #f0dcd4);
+        color: #8f1f38;
+        border: 1px solid #b3243f;
+        border-radius: 2px;
+        box-shadow: 0 0 0 2px #1c1824, 0 2px 6px rgba(0,0,0,.35);
+        font-family: Georgia, serif;
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        line-height: 15px;
+    }
+
+    #${SHEET_ID} .ltt-title svg {
+        width: 8px;
+        height: 8px;
+        color: #b3243f;
+    }
+
+    /* แถบหัว: ปุ่มเลื่อนรวมเป็นแคปซูลเดียว */
     #${SHEET_ID} .ltt-head {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 12px 10px 4px 12px;
-    }
-
-    #${SHEET_ID} .ltt-title {
-        font-family: Georgia, serif;
-        font-size: 11px;
-        letter-spacing: 3px;
-        color: #e0788a;
+        justify-content: flex-end;
+        padding: 10px 8px 4px 10px;
     }
 
     #${SHEET_ID} .ltt-nav {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
+        padding: 2px 3px;
+        border: 1px solid rgba(224,120,138,.5);
+        border-radius: 12px;
+        background: rgba(10,8,16,.38);
     }
 
     #${SHEET_ID} .ltt-nav button {
         appearance: none;
         -webkit-appearance: none;
-        width: 22px;
-        height: 22px;
+        width: 18px;
+        height: 18px;
         padding: 0;
         margin: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid rgba(194,74,94,.75) !important;
-        border-radius: 2px !important;
-        background: rgba(20,18,28,.35) !important;
+        border: 0 !important;
+        border-radius: 50% !important;
+        background: transparent !important;
         box-shadow: none !important;
-        color: #efe7ea;
+        color: #f6e8e2;
         font-size: 13px;
         line-height: 1;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
+        transition: background .15s ease;
+    }
+
+    #${SHEET_ID} .ltt-nav button:active {
+        background: rgba(246,232,226,.2) !important;
     }
 
     #${SHEET_ID} .ltt-nav button:disabled {
-        opacity: .35;
+        opacity: .28;
+    }
+
+    /* ปุ่มปิดแยกด้วยเส้นกั้นบาง ๆ */
+    #${SHEET_ID} .ltt-nav .ltt-close {
+        margin-left: 3px;
+        font-size: 10px;
+        color: #e0788a;
+        position: relative;
+    }
+
+    #${SHEET_ID} .ltt-nav .ltt-close::before {
+        content: '';
+        position: absolute;
+        left: -4px;
+        top: 4px;
+        bottom: 4px;
+        width: 1px;
+        background: rgba(224,120,138,.45);
     }
 
     #${SHEET_ID} .ltt-nav-label {
-        min-width: 34px;
+        min-width: 26px;
         text-align: center;
         font-family: 'Courier New', monospace;
-        font-size: 11px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .5px;
         color: #f6e8e2;
     }
 
+    /* บรรทัดสรุป + เส้นไล่เฉดคั่นด้านล่าง */
     #${SHEET_ID} .ltt-meta {
-        padding: 0 12px 6px;
-        color: #bfaeb6;
-        font-size: 11px;
+        margin: 0 10px 5px;
+        padding: 0 0 4px;
+        color: #cdbcc4;
+        font-size: 9.5px;
+        letter-spacing: .2px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        background: linear-gradient(90deg, rgba(224,120,138,.7), rgba(224,120,138,.12) 70%, transparent) left bottom / 100% 1px no-repeat;
+    }
+
+    #${SHEET_ID} .ltt-meta:empty {
+        display: none;
     }
 
     #${SHEET_ID} .ltt-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-height: 0;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        padding: 0 12px 10px;
+        padding: 1px 8px 10px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(224,120,138,.6) transparent;
     }
 
+    #${SHEET_ID} .ltt-list::-webkit-scrollbar { width: 4px; }
+    #${SHEET_ID} .ltt-list::-webkit-scrollbar-track { background: transparent; }
+    #${SHEET_ID} .ltt-list::-webkit-scrollbar-thumb { background: rgba(224,120,138,.55); border-radius: 2px; }
+
+
+    /* ปุ่มย้าย (ติ๊ก = เปิดโหมดลากย้าย / กดอีกครั้ง = ล็อกตำแหน่ง) */
+    #${SHEET_ID} .ltt-nav button svg {
+        width: 11px;
+        height: 11px;
+        pointer-events: none;
+    }
+
+    #${SHEET_ID} .ltt-nav .ltt-move .ltt-tick { display: none; }
+
+    #${SHEET_ID} .ltt-nav .ltt-move.ltt-on {
+        background: #f6e8e2 !important;
+        color: #8f1f38;
+    }
+
+    #${SHEET_ID} .ltt-nav .ltt-move.ltt-on .ltt-arrows { display: none; }
+    #${SHEET_ID} .ltt-nav .ltt-move.ltt-on .ltt-tick { display: block; }
+
+    #${SHEET_ID} .ltt-nav .ltt-reset[hidden] { display: none; }
+
+    /* โหมดย้าย: กรอบประเรืองแสง ลากได้ทั้งหน้าต่าง */
+    #${SHEET_ID}.ltt-moving {
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        box-shadow:
+            0 0 0 1px rgba(246,232,226,.9),
+            0 0 14px rgba(224,120,138,.55),
+            0 12px 30px rgba(0,0,0,.55);
+    }
+
+    #${SHEET_ID}.ltt-moving::before {
+        border-style: dashed;
+        border-color: rgba(246,232,226,.7);
+    }
+
+    #${SHEET_ID}.ltt-moving.ltt-dragging {
+        cursor: grabbing;
+        transition: none;
+    }
+
+    #${SHEET_ID}.ltt-moving .ltt-list {
+        touch-action: none;
+        overflow: hidden;
+    }
+
+    /* ข้อความสถานะว่าง */
     #${SHEET_ID} .ltt-note {
-        padding: 8px 0 2px;
-        color: #bfaeb6;
+        padding: 14px 0 8px;
+        color: #cdbcc4;
+        text-align: center;
     }
 
+    #${SHEET_ID} .ltt-note::before {
+        content: '\\2726';
+        display: block;
+        margin-bottom: 4px;
+        color: #e0788a;
+        font-size: 15px;
+        line-height: 1;
+    }
+
+    /* การ์ดรายการ: แถบสีด้านซ้าย + เลขลำดับ + ป้ายชื่อเล่ม */
     #${SHEET_ID} .ltt-card {
-        margin-top: 6px;
-        padding: 6px 8px;
-        border: 1px solid rgba(194,74,94,.5);
-        border-radius: 2px;
-        background: rgba(20,18,28,.35);
+        position: relative;
+        flex: none;
+        padding: 5px 7px 6px 11px;
+        border: 1px solid rgba(224,120,138,.32);
+        border-radius: 3px;
+        background: linear-gradient(135deg, rgba(10,8,16,.55), rgba(10,8,16,.3));
+        box-shadow: inset 0 1px 0 rgba(246,232,226,.05);
+        overflow: hidden;
+        animation: ltt-card-in .3s ease both;
+        animation-delay: calc(var(--i, 0) * 45ms);
+    }
+
+    #${SHEET_ID} .ltt-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, #e0788a, #b3243f);
+    }
+
+    /* constant = แถบทอง */
+    #${SHEET_ID} .ltt-card.ltt-const {
+        border-color: rgba(232,194,122,.38);
+    }
+
+    #${SHEET_ID} .ltt-card.ltt-const::before {
+        background: linear-gradient(180deg, #f4dba2, #c9953f);
+    }
+
+    /* ไม่พบคีย์: เส้นประ จางลง */
+    #${SHEET_ID} .ltt-card.ltt-weak {
+        border-style: dashed;
+        opacity: .86;
     }
 
     #${SHEET_ID} .ltt-card-top {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 8px;
+        gap: 6px;
     }
 
-    #${SHEET_ID} .ltt-card-title {
-        color: #fff;
-        font-size: 12.5px;
-        word-break: break-word;
+    #${SHEET_ID} .ltt-num {
+        flex: none;
+        font-family: 'Courier New', monospace;
+        font-size: 9px;
+        font-weight: 700;
+        color: #e0788a;
+        letter-spacing: .5px;
+    }
+
+    #${SHEET_ID} .ltt-card.ltt-const .ltt-num {
+        color: #e8c27a;
     }
 
     #${SHEET_ID} .ltt-book {
         flex: none;
         max-width: 40%;
-        padding: 0 5px;
-        border: 1px solid rgba(194,74,94,.6);
+        padding: 0 6px;
+        background: linear-gradient(180deg, #c42b48, #a21f39);
+        color: #f6e8e2;
         border-radius: 2px;
-        color: #e0788a;
         font-family: Georgia, serif;
-        font-size: 9px;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
+        font-size: 8.5px;
+        letter-spacing: .7px;
+        line-height: 13px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
+    #${SHEET_ID} .ltt-card-title {
+        flex: 1;
+        min-width: 0;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    /* แถวคีย์: มีป้ายหัวแถวเล็ก ๆ */
     #${SHEET_ID} .ltt-keys {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
-        margin-top: 5px;
+        align-items: center;
+        gap: 3px;
+        margin-top: 4px;
+    }
+
+    #${SHEET_ID} .ltt-keys + .ltt-keys {
+        margin-top: 3px;
+    }
+
+    #${SHEET_ID} .ltt-keys-label {
+        flex: none;
+        min-width: 19px;
+        color: #e0788a;
+        font-family: Georgia, serif;
+        font-size: 7.5px;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
     }
 
     #${SHEET_ID} .ltt-key {
-        padding: 0 7px;
-        border: 1px solid rgba(246,232,226,.5);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 7px 0 6px;
+        border: 1px solid rgba(246,232,226,.4);
         border-radius: 9px;
-        background: rgba(246,232,226,.1);
+        background: rgba(246,232,226,.09);
         color: #f6e8e2;
-        font-size: 11px;
+        font-size: 9.5px;
+        line-height: 14px;
         word-break: break-word;
+    }
+
+    #${SHEET_ID} .ltt-key::before {
+        content: '';
+        flex: none;
+        width: 4px;
+        height: 4px;
+        background: #e0788a;
+        transform: rotate(45deg);
     }
 
     #${SHEET_ID} .ltt-key.ltt-sec {
         border-style: dashed;
+        border-color: rgba(246,232,226,.3);
+        background: transparent;
+        color: #d9c9d0;
     }
 
-    #${SHEET_ID} .ltt-status {
-        margin-top: 8px;
-        color: #8f7f88;
-        font-size: 10px;
-        line-height: 1.4;
+    #${SHEET_ID} .ltt-key.ltt-sec::before {
+        background: transparent;
+        border: 1px solid #e0788a;
+        box-sizing: border-box;
     }
 
+    /* ป้ายบอกเหตุผลท้ายการ์ด */
     #${SHEET_ID} .ltt-tag {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         margin-top: 4px;
         color: #bfaeb6;
-        font-size: 11px;
+        font-size: 9px;
+    }
+
+    #${SHEET_ID} .ltt-tag::before {
+        content: '\\2726';
+        flex: none;
+        color: #e0788a;
+        font-size: 9px;
+    }
+
+    #${SHEET_ID} .ltt-card.ltt-const .ltt-tag {
+        color: #e8c27a;
+    }
+
+    #${SHEET_ID} .ltt-card.ltt-const .ltt-tag::before {
+        color: #e8c27a;
+    }
+
+    /* สถานะการติดตามท้ายรายการ */
+    #${SHEET_ID} .ltt-status {
+        margin-top: 4px;
+        padding-top: 7px;
+        border-top: 1px dashed rgba(246,232,226,.2);
+        color: #9d8c95;
+        font-size: 8.5px;
+        line-height: 1.45;
+        text-align: center;
     }
 
 `;
@@ -1445,6 +1737,70 @@ function makeEl(tag, className, text) {
     return element;
 }
 
+
+function loadPos() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+        if (raw && Number.isFinite(raw.x) && Number.isFinite(raw.y)) return raw;
+    } catch { /* ข้าม */ }
+    return null;
+}
+
+function savePos() {
+    try {
+        if (customPos) localStorage.setItem(POS_KEY, JSON.stringify(customPos));
+        else localStorage.removeItem(POS_KEY);
+    } catch { /* ข้าม */ }
+}
+
+function syncMoveUi() {
+    const sheet = document.getElementById(SHEET_ID);
+    if (!sheet) return;
+
+    sheet.classList.toggle('ltt-moving', moveMode);
+    sheet.querySelector('.ltt-move')?.classList.toggle('ltt-on', moveMode);
+
+    const reset = sheet.querySelector('.ltt-reset');
+    if (reset) reset.hidden = !customPos;
+}
+
+// ลากย้ายหน้าต่างด้วยนิ้ว/เมาส์ (ทำงานเฉพาะตอนติ๊กโหมดย้าย)
+function bindDrag(sheet) {
+    let drag = null;
+
+    sheet.addEventListener('pointerdown', event => {
+        if (!moveMode || event.button > 0) return;
+        if (event.target.closest('.ltt-nav')) return;
+
+        const rect = sheet.getBoundingClientRect();
+        drag = { id: event.pointerId, dx: event.clientX - rect.left, dy: event.clientY - rect.top };
+
+        sheet.classList.add('ltt-dragging');
+        try { sheet.setPointerCapture(event.pointerId); } catch { /* ข้าม */ }
+        event.preventDefault();
+    });
+
+    sheet.addEventListener('pointermove', event => {
+        if (!drag || event.pointerId !== drag.id) return;
+
+        customPos = { x: event.clientX - drag.dx, y: event.clientY - drag.dy };
+        positionSheet();
+        event.preventDefault();
+    });
+
+    const end = event => {
+        if (!drag || event.pointerId !== drag.id) return;
+
+        drag = null;
+        sheet.classList.remove('ltt-dragging');
+        savePos();
+        syncMoveUi();
+    };
+
+    sheet.addEventListener('pointerup', end);
+    sheet.addEventListener('pointercancel', end);
+}
+
 function createSheet() {
     let sheet = document.getElementById(SHEET_ID);
     if (sheet) return sheet;
@@ -1453,12 +1809,24 @@ function createSheet() {
     sheet.id = SHEET_ID;
 
     sheet.innerHTML = `
+        <span class="ltt-corner ltt-c-tl"></span>
+        <span class="ltt-corner ltt-c-tr"></span>
+        <span class="ltt-corner ltt-c-bl"></span>
+        <span class="ltt-corner ltt-c-br"></span>
+        <span class="ltt-spk ltt-spk-a">${SPARK}</span>
+        <span class="ltt-spk ltt-spk-b">${SPARK}</span>
+        <span class="ltt-spk ltt-spk-c">${SPARK}</span>
+        <span class="ltt-title">${SPARK}Triggers</span>
         <div class="ltt-head">
-            <span class="ltt-title">+ TRIGGERS</span>
             <span class="ltt-nav">
                 <button type="button" class="ltt-prev" aria-label="ก่อนหน้า">‹</button>
                 <span class="ltt-nav-label"></span>
                 <button type="button" class="ltt-next" aria-label="ถัดไป">›</button>
+                <button type="button" class="ltt-reset" aria-label="คืนตำแหน่งเดิม" title="คืนตำแหน่งเดิม" hidden>↺</button>
+                <button type="button" class="ltt-move" aria-label="ย้ายตำแหน่ง" title="ย้ายตำแหน่ง">
+                    <svg class="ltt-arrows" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 1v10M1 6h10M6 1L4.4 2.6M6 1l1.6 1.6M6 11l-1.6-1.6M6 11l1.6-1.6M1 6l1.6-1.6M1 6l1.6 1.6M11 6L9.4 4.4M11 6L9.4 7.6"/></svg>
+                    <svg class="ltt-tick" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.4L5 9l4.5-5.5"/></svg>
+                </button>
                 <button type="button" class="ltt-close" aria-label="ปิด">✕</button>
             </span>
         </div>
@@ -1491,7 +1859,23 @@ function createSheet() {
         closeSheet();
     });
 
+    sheet.querySelector('.ltt-move').addEventListener('click', event => {
+        event.stopPropagation();
+        moveMode = !moveMode;
+        syncMoveUi();
+    });
+
+    sheet.querySelector('.ltt-reset').addEventListener('click', event => {
+        event.stopPropagation();
+        customPos = null;
+        savePos();
+        syncMoveUi();
+        positionSheet();
+    });
+
+    bindDrag(sheet);
     document.body.appendChild(sheet);
+    syncMoveUi();
 
     return sheet;
 }
@@ -1507,31 +1891,39 @@ function appendStatus(list) {
     list.appendChild(makeEl('div', 'ltt-status', text));
 }
 
-function renderCard(item) {
+function renderKeyRow(label, keys, secondary) {
+    const row = makeEl('div', 'ltt-keys');
+
+    row.appendChild(makeEl('span', 'ltt-keys-label', label));
+    keys.forEach(key => row.appendChild(makeEl('span', secondary ? 'ltt-key ltt-sec' : 'ltt-key', key)));
+
+    return row;
+}
+
+function renderCard(item, index = 0) {
+    const keys = toArray(item.k);
+    const secondary = toArray(item.s);
+    const hasKeys = keys.length > 0 || secondary.length > 0;
+
     const card = makeEl('div', 'ltt-card');
+    card.style.setProperty('--i', String(Math.min(index, 8)));
+
+    if (item.c) card.classList.add('ltt-const');
+    else if (!hasKeys && !item.v) card.classList.add('ltt-weak');
 
     const top = makeEl('div', 'ltt-card-top');
-    top.appendChild(makeEl('span', 'ltt-card-title', item.t));
-
+    top.appendChild(makeEl('span', 'ltt-num', String(index + 1).padStart(2, '0')));
     if (item.w) top.appendChild(makeEl('span', 'ltt-book', item.w));
+    top.appendChild(makeEl('span', 'ltt-card-title', item.t));
 
     card.appendChild(top);
 
-    const keys = toArray(item.k);
-    const secondary = toArray(item.s);
-
-    if (keys.length || secondary.length) {
-        const row = makeEl('div', 'ltt-keys');
-
-        keys.forEach(key => row.appendChild(makeEl('span', 'ltt-key', key)));
-        secondary.forEach(key => row.appendChild(makeEl('span', 'ltt-key ltt-sec', key)));
-
-        card.appendChild(row);
-    }
+    if (keys.length) card.appendChild(renderKeyRow('Key', keys, false));
+    if (secondary.length) card.appendChild(renderKeyRow('2nd', secondary, true));
 
     if (item.c) {
         card.appendChild(makeEl('div', 'ltt-tag', 'constant · ทำงานตลอด'));
-    } else if (!keys.length && !secondary.length) {
+    } else if (!hasKeys) {
         card.appendChild(makeEl(
             'div',
             'ltt-tag',
@@ -1566,7 +1958,7 @@ function renderSheet() {
 
         if (liveEntries?.length) {
             meta.textContent = `ผลล่าสุดจาก SillyTavern · ${liveEntries.length} รายการ`;
-            liveEntries.forEach(item => list.appendChild(renderCard(item)));
+            liveEntries.forEach((item, i) => list.appendChild(renderCard(item, i)));
         } else {
             list.appendChild(makeEl(
                 'div',
@@ -1606,7 +1998,7 @@ function renderSheet() {
         return;
     }
 
-    items.forEach(item => list.appendChild(renderCard(item)));
+    items.forEach((item, i) => list.appendChild(renderCard(item, i)));
 }
 
 // วางด้วย top แล้ววัดตำแหน่งจริงบนจอ ถ้าเพี้ยน (เช่นมี ancestor ที่ทำให้ fixed
@@ -1620,6 +2012,32 @@ function placeTop(el, desiredTop) {
     if (Math.abs(error) > 1) {
         el.style.top = `${desiredTop + error}px`;
     }
+}
+
+function resetCustomStyle(sheet) {
+    for (const prop of ['left', 'right', 'width', 'margin']) sheet.style.removeProperty(prop);
+}
+
+// ตำแหน่งที่ผู้ใช้ลากไว้เอง: จำกัดไม่ให้หลุดขอบจอ
+function placeCustom(sheet) {
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+    const margin = 6;
+
+    const width = Math.min(270, viewW - margin * 2);
+
+    sheet.style.margin = '0';
+    sheet.style.right = 'auto';
+    sheet.style.width = `${width}px`;
+    sheet.style.maxHeight = `${Math.max(110, viewH * 0.5)}px`;
+
+    const height = sheet.offsetHeight;
+
+    customPos.x = Math.max(margin, Math.min(customPos.x, viewW - width - margin));
+    customPos.y = Math.max(margin, Math.min(customPos.y, viewH - height - margin));
+
+    sheet.style.left = `${customPos.x}px`;
+    placeTop(sheet, customPos.y);
 }
 
 function positionSheet() {
@@ -1637,9 +2055,15 @@ function positionSheet() {
 
     // กล่องข้อความถูกซ่อน (เช่นยังไม่เข้าแชท): วางเหนือขอบล่างจอ 80px
     const bottomEdge = hasBox ? rect.top - gap : viewH - 80;
-    const room = Math.max(140, bottomEdge - 8);
+    const room = Math.max(110, bottomEdge - 14);
 
-    sheet.style.maxHeight = `${Math.min(room, viewH * 0.6)}px`;
+    if (customPos) {
+        placeCustom(sheet);
+        return;
+    }
+
+    resetCustomStyle(sheet);
+    sheet.style.maxHeight = `${Math.min(room, viewH * 0.38)}px`;
 
     // วัดโดยปิดอนิเมชันชั่วคราว ไม่งั้นค่าเพี้ยนระหว่างกำลัง transition
     const prevTransition = sheet.style.transition;
@@ -1699,6 +2123,8 @@ function closeSheet() {
     if (!sheetOpen) return;
 
     sheetOpen = false;
+    moveMode = false;
+    syncMoveUi();
 
     document.getElementById(SHEET_ID)?.classList.remove('ltt-visible');
 
