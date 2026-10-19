@@ -33,7 +33,8 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v4';
+const VERSION = 'v5';
+const DEBUG = true; // ตั้งเป็น false เพื่อปิดกล่องบอกสถานะบนจอ
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -51,7 +52,7 @@ function dispose() {
         try { cleanups.pop()(); } catch { /* ข้าม */ }
     }
 
-    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`]) {
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`, `${EXT_ID}-debug`]) {
         document.getElementById(id)?.remove();
     }
 
@@ -836,6 +837,8 @@ function activateItem(item) {
 
     const category = CATEGORIES.find(c => c.id === item.dataset.id);
 
+    dbg(`activate ${item.dataset.id}`);
+
     try {
         closePanel();
 
@@ -846,8 +849,48 @@ function activateItem(item) {
     }
 }
 
+// หาตัวเลือกจากพิกัดนิ้วเทียบกรอบของมันตรง ๆ
+// ใช้ได้แม้มีอะไรโปร่งใสลอยทับตัวเลือก จนเบราว์เซอร์ส่งการแตะไปให้ตัวนั้นแทน
+function itemAtPoint(event) {
+    if (!panelOpen) return null;
+
+    const x = event.clientX;
+    const y = event.clientY;
+
+    if (!Number.isFinite(x) || !Number.isFinite(y) || (x === 0 && y === 0)) return null;
+
+    const pad = 8;
+
+    for (const item of document.querySelectorAll(`#${PANEL_ID} .ltt-item`)) {
+        const r = item.getBoundingClientRect();
+
+        if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) {
+            return item;
+        }
+    }
+
+    return null;
+}
+
+// แค่จดบันทึกว่านิ้วแตะโดนอะไรบ้าง ไม่ยุ่งกับการทำงาน
+function logTap(event, item) {
+    if (!DEBUG || !(panelOpen || sheetOpen)) return;
+
+    const stack = document
+        .elementsFromPoint(event.clientX, event.clientY)
+        .filter(el => el.id !== `${EXT_ID}-debug`)
+        .slice(0, 3)
+        .map(describe)
+        .join(' > ');
+
+    dbg(`${event.type} (${Math.round(event.clientX)},${Math.round(event.clientY)}) ${item ? 'ITEM' : 'miss'} | ${stack}`);
+}
+
 function onItemTap(event) {
-    const item = event.target?.closest?.(`#${PANEL_ID} .ltt-item`);
+    const item = event.target?.closest?.(`#${PANEL_ID} .ltt-item`) || itemAtPoint(event);
+
+    logTap(event, item);
+
     if (!item) return;
 
     if (event.type === 'pointerup' && event.button > 0) return;
@@ -861,10 +904,11 @@ function onItemTap(event) {
 }
 
 function bindGlobalListeners() {
+    listen(window, 'pointerdown', event => logTap(event, itemAtPoint(event)), true);
     listen(window, 'pointerup', onItemTap, true);
     listen(window, 'click', onItemTap, true);
 
-    listen(document, 'click', event => {
+    listen(document, 'click', function onOutsideClick(event) {
         // คลิกที่ตามหลังการเลือกตัวเลือกหยก ๆ ห้ามนับเป็นการแตะข้างนอก
         if (Date.now() - lastActivate < 450) return;
 
@@ -878,6 +922,10 @@ function bindGlobalListeners() {
             sheet?.contains(event.target)
         ) {
             return;
+        }
+
+        if (sheetOpen || panelOpen) {
+            dbg(`outside click -> ปิด (target=${describe(event.target)})`);
         }
 
         if (sheetOpen) closeSheet();
@@ -1106,6 +1154,39 @@ function startTracking() {
  * แผงแสดงรายการทริกเกอร์
  * ============================================================ */
 
+// กล่องบอกสถานะเล็ก ๆ มุมบนจอ (ไม่รับการแตะ) ใช้ดูว่าอะไรรับการแตะแทนตัวเลือก
+function dbg(text) {
+    if (!DEBUG) return;
+
+    const id = `${EXT_ID}-debug`;
+    let box = document.getElementById(id);
+
+    if (!box) {
+        box = document.createElement('div');
+        box.id = id;
+        box.style.cssText =
+            'position:fixed;left:4px;top:4px;max-width:calc(100vw - 8px);padding:4px 6px;' +
+            'background:rgba(0,0,0,.78);color:#9fe8a8;font:10px/1.35 monospace;' +
+            'white-space:pre-wrap;word-break:break-all;z-index:1000002;pointer-events:none;';
+        box.dataset.lines = '[]';
+        document.body.appendChild(box);
+    }
+
+    const lines = JSON.parse(box.dataset.lines);
+    lines.push(text);
+    while (lines.length > 9) lines.shift();
+
+    box.dataset.lines = JSON.stringify(lines);
+    box.textContent = lines.join('\n');
+}
+
+function describe(el) {
+    if (!el || !el.tagName) return String(el);
+
+    const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/)[0] : '';
+    return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (cls ? '.' + cls : '');
+}
+
 function showToast(text, ms = 5000) {
     const id = `${EXT_ID}-toast`;
 
@@ -1310,6 +1391,9 @@ function openSheet() {
     renderSheet();
     positionSheet();
     verifySheet();
+
+    const r = sheet.getBoundingClientRect();
+    dbg(`openSheet: pos=${getComputedStyle(sheet).position} rect=${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)}`);
 }
 
 // เช็คว่าหน้าต่างขึ้นบนจอจริงไหม ถ้าไม่ขึ้นให้บอกสาเหตุบนจอเลย (มือถือไม่มี devtools)
@@ -1340,6 +1424,8 @@ function verifySheet() {
 
 function closeSheet() {
     if (!sheetOpen) return;
+
+    dbg('closeSheet <- ' + (new Error().stack.split('\n')[2] || '').trim().slice(-48));
 
     sheetOpen = false;
 
