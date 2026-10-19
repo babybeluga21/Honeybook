@@ -31,7 +31,7 @@ function addStyles() {
     style.id = `${EXT_ID}-style`;
 
     style.textContent = `
-    /* ===== ลูกแก้ว ===== */
+    /* ===== ลูกแก้ว (ป้ายครีม) ===== */
     #${BUTTON_ID} {
         position: fixed !important;
         left: 8px;
@@ -48,62 +48,63 @@ function addStyles() {
         align-items: center;
         justify-content: center;
 
-        border: 1px solid rgba(255,235,242,.6) !important;
+        border: 0 !important;
         border-radius: 50% !important;
-        background: linear-gradient(135deg, rgba(255,190,210,.42), rgba(190,150,215,.3)) !important;
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 3px 8px rgba(0,0,0,.2) !important;
+        background: #f6e8e2 !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,.3) !important;
+        color: #b3243f;
 
         cursor: pointer;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
 
         transform: translateY(-100%);
-        transition: border-color .15s ease, transform .15s ease;
+        transition: background .2s ease, color .2s ease, transform .15s ease;
     }
 
-    /* วงเส้นบางรอบลูกแก้ว */
+    /* วงบางล้อมรอบ */
     #${BUTTON_ID}::before {
         content: '';
         position: absolute;
         inset: -3px;
         border-radius: 50%;
-        border: 1px solid rgba(255,235,242,.5);
+        border: 1px solid rgba(246,232,226,.6);
         pointer-events: none;
-        transition: border-color .15s ease;
+        transition: border-color .2s ease;
     }
 
     #${BUTTON_ID} .ltt-gem {
         display: flex;
         line-height: 0;
-        color: #f5eff2;
         pointer-events: none;
-        transition: transform .15s ease, color .15s ease;
+        transition: transform .2s ease;
     }
 
-    #${BUTTON_ID}:hover {
-        border-color: rgba(255,255,255,.85) !important;
+    #${BUTTON_ID} .ltt-gem svg {
+        width: 11px;
+        height: 11px;
+    }
+
+    #${BUTTON_ID}:not(.ltt-active):hover {
+        background: #fff7f3 !important;
     }
 
     #${BUTTON_ID}:active {
         transform: translateY(-100%) scale(.94);
     }
 
+    /* ตอนเปิด: วงกลายเป็นแดง ประกายกระพริบ */
     #${BUTTON_ID}.ltt-active {
-        background: linear-gradient(135deg, rgba(255,150,180,.6), rgba(210,100,150,.42)) !important;
+        background: #b3243f !important;
+        color: #f6e8e2;
     }
 
-    /* ตอนเปิด: วงลูกปัดหมุนช้า ๆ + ประกายกระพริบ + ไอคอนหมุนเป็นสีชมพู */
     #${BUTTON_ID}.ltt-active::before {
-        inset: -4px;
-        border: 2px dotted rgba(255,205,220,.85);
-        animation: ltt-spin 14s linear infinite;
+        border-color: rgba(246,232,226,.95);
     }
 
     #${BUTTON_ID}.ltt-active .ltt-gem {
-        color: #fff;
-        transform: scale(1.12) rotate(90deg);
+        transform: scale(1.1) rotate(90deg);
     }
 
     #${BUTTON_ID} .ltt-spark {
@@ -120,8 +121,8 @@ function addStyles() {
         height: 100%;
     }
 
-    #${BUTTON_ID} .ltt-s1 { top: -10px; right: -9px; width: 9px; height: 9px; color: #f5eff2; }
-    #${BUTTON_ID} .ltt-s2 { bottom: -9px; left: -8px; width: 6px; height: 6px; color: #e0788a; }
+    #${BUTTON_ID} .ltt-s1 { top: -11px; right: -10px; width: 8px; height: 8px; color: #f6e8e2; }
+    #${BUTTON_ID} .ltt-s2 { bottom: -9px; left: -9px; width: 5px; height: 5px; color: #e0788a; }
 
     #${BUTTON_ID}.ltt-active .ltt-spark {
         opacity: 1;
@@ -133,17 +134,12 @@ function addStyles() {
         animation-delay: .8s;
     }
 
-    @keyframes ltt-spin {
-        to { transform: rotate(360deg); }
-    }
-
     @keyframes ltt-twinkle {
         from { transform: scale(.55); opacity: .5; }
         to   { transform: scale(1);   opacity: 1; }
     }
 
     @media (prefers-reduced-motion: reduce) {
-        #${BUTTON_ID}.ltt-active::before,
         #${BUTTON_ID}.ltt-active .ltt-spark { animation: none; }
     }
 
