@@ -1,7 +1,20 @@
 const EXT_ID = 'lorebook-trigger-tracker';
 const BUTTON_ID = `${EXT_ID}-button`;
 const PANEL_ID = `${EXT_ID}-panel`;
-const ORB_SIZE = 34;
+const ORB_SIZE = 23;
+
+// ตัวเลือกกลมที่แผ่ออกมาเป็นส่วนโค้ง
+const ITEM_SIZE = 30;
+const ARC_RADIUS = 56;
+const ARC_STEP = 36;
+
+// ไอคอนประกายสี่แฉก (ใช้สีตามตัวอักษร)
+const SPARK = '<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M5 0C5.4 3.2 6.8 4.6 10 5C6.8 5.4 5.4 6.8 5 10C4.6 6.8 3.2 5.4 0 5C3.2 4.6 4.6 3.2 5 0Z"/></svg>';
+
+// เพิ่มตัวเลือกใหม่ได้ที่นี่ (แนะนำไม่เกิน 3 อัน)
+const CATEGORIES = [
+    { id: 'lorebook', label: 'Lorebook', icon: SPARK, count: 0 }
+];
 
 let initialized = false;
 let panelOpen = false;
@@ -32,12 +45,12 @@ function addStyles() {
         align-items: center;
         justify-content: center;
 
-        border: 1px solid rgba(225,215,235,.4) !important;
+        border: 1px solid rgba(225,215,235,.35) !important;
         border-radius: 50% !important;
-        background: linear-gradient(135deg, rgba(125,30,52,.55), rgba(30,28,42,.55) 70%) !important;
-        -webkit-backdrop-filter: blur(8px);
-        backdrop-filter: blur(8px);
-        box-shadow: 0 4px 14px rgba(0,0,0,.35) !important;
+        background: linear-gradient(135deg, rgba(125,30,52,.3), rgba(30,28,42,.22) 70%) !important;
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 3px 10px rgba(0,0,0,.25) !important;
 
         cursor: pointer;
         user-select: none;
@@ -51,20 +64,19 @@ function addStyles() {
     #${BUTTON_ID}::before {
         content: '';
         position: absolute;
-        inset: -4px;
+        inset: -3px;
         border-radius: 50%;
-        border: 1px dotted rgba(245,239,242,.55);
+        border: 1px dotted rgba(245,239,242,.5);
         pointer-events: none;
         transition: border-color .15s ease;
     }
 
     #${BUTTON_ID} .ltt-gem {
-        display: block;
-        font-size: 14px;
-        line-height: 1;
+        display: flex;
+        line-height: 0;
         color: #f5eff2;
         pointer-events: none;
-        transition: transform .15s ease;
+        transition: transform .15s ease, color .15s ease;
     }
 
     #${BUTTON_ID}:hover {
@@ -76,115 +88,213 @@ function addStyles() {
     }
 
     #${BUTTON_ID}.ltt-active {
-        background: linear-gradient(135deg, rgba(160,40,65,.7), rgba(30,28,42,.55) 70%) !important;
+        background: linear-gradient(135deg, rgba(160,40,65,.5), rgba(30,28,42,.28) 70%) !important;
     }
 
+    /* ตอนเปิด: วงลูกปัดหมุนช้า ๆ + ประกายกระพริบ + ไอคอนหมุนเป็นสีชมพู */
     #${BUTTON_ID}.ltt-active::before {
-        border-style: solid;
-        border-color: rgba(245,239,242,.7);
+        inset: -4px;
+        border: 2px dotted rgba(255,205,220,.85);
+        animation: ltt-spin 14s linear infinite;
     }
 
     #${BUTTON_ID}.ltt-active .ltt-gem {
-        transform: scale(1.12);
+        color: #ffd0dc;
+        transform: scale(1.12) rotate(90deg);
     }
 
-    /* ===== แผง ===== */
-    #${PANEL_ID} {
-        position: fixed;
-        display: none;
-        align-items: center;
-        gap: 4px;
-        padding: 10px 6px 6px;
-
-        box-sizing: border-box;
-        max-width: calc(100vw - 16px);
-
-        background: linear-gradient(90deg, rgba(125,30,52,.55), rgba(30,28,42,.55) 65%);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-
-        border: 1px solid rgba(225,215,235,.4);
-        border-left: 3px solid #c24a5e;
-        border-radius: 3px;
-
-        box-shadow: 0 4px 14px rgba(0,0,0,.35);
-        font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
-
-        z-index: 999999;
-        opacity: 0;
-        transform: translateY(4px) scale(.97);
-        transform-origin: bottom left;
-        pointer-events: none;
-
-        transition: opacity .16s ease, transform .16s ease;
-    }
-
-    /* ลูกไม้ขอบบน */
-    #${PANEL_ID}::before {
-        content: '';
+    #${BUTTON_ID} .ltt-spark {
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 5px;
-        background: radial-gradient(circle at 4px 0, #f5eff2 2.7px, transparent 3px) 0 0/8px 5px repeat-x;
-        pointer-events: none;
-    }
-
-    #${PANEL_ID}.ltt-visible {
         display: flex;
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        pointer-events: auto;
+        opacity: 0;
+        transform: scale(0);
+        pointer-events: none;
+        transition: opacity .2s ease, transform .2s ease;
     }
 
-    #${PANEL_ID} .ltt-category {
+    #${BUTTON_ID} .ltt-spark svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    #${BUTTON_ID} .ltt-s1 { top: -10px; right: -9px; width: 9px; height: 9px; color: #f5eff2; }
+    #${BUTTON_ID} .ltt-s2 { bottom: -9px; left: -8px; width: 6px; height: 6px; color: #e0788a; }
+
+    #${BUTTON_ID}.ltt-active .ltt-spark {
+        opacity: 1;
+        transform: scale(1);
+        animation: ltt-twinkle 1.6s ease-in-out infinite alternate;
+    }
+
+    #${BUTTON_ID}.ltt-active .ltt-s2 {
+        animation-delay: .8s;
+    }
+
+    @keyframes ltt-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes ltt-twinkle {
+        from { transform: scale(.55); opacity: .5; }
+        to   { transform: scale(1);   opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #${BUTTON_ID}.ltt-active::before,
+        #${BUTTON_ID}.ltt-active .ltt-spark { animation: none; }
+    }
+
+    /* ===== ตัวเลือกกลม (จุดศูนย์กลางอยู่ที่ลูกแก้ว) ===== */
+    #${PANEL_ID} {
+        --r: ${ARC_RADIUS}px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+        z-index: 999999;
+        pointer-events: none;
+        font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
+    }
+
+    /* เส้นโค้งบางเชื่อมตัวเลือก */
+    #${PANEL_ID} .ltt-arc {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: calc(var(--r) * 2);
+        height: calc(var(--r) * 2);
+        box-sizing: border-box;
+        border: 1px solid rgba(245,239,242,.3);
+        border-radius: 50%;
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(.6);
+        transition: opacity .2s ease, transform .26s ease;
+    }
+
+    #${PANEL_ID}.ltt-visible .ltt-arc {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    #${PANEL_ID} .ltt-item {
         appearance: none;
         -webkit-appearance: none;
 
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        min-height: 28px;
-        padding: 0 9px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: ${ITEM_SIZE}px;
+        height: ${ITEM_SIZE}px;
+        padding: 0;
         margin: 0;
 
-        border: 1px solid rgba(194,74,94,.75);
-        border-radius: 2px;
-        background: rgba(20,18,28,.35);
-
-        color: #efe7ea;
-        font-family: inherit;
-        font-size: 12px;
-
-        white-space: nowrap;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    #${PANEL_ID} .ltt-category:active {
-        background: rgba(194,74,94,.3);
-    }
-
-    #${PANEL_ID} .ltt-category-icon {
-        font-size: 11px;
-        color: #e0788a;
-    }
-
-    #${PANEL_ID} .ltt-category-count {
-        min-width: 15px;
-        height: 15px;
-        padding: 0 4px;
-
-        display: inline-flex;
+        display: flex;
         align-items: center;
         justify-content: center;
 
-        border-radius: 8px;
-        background: rgba(194,74,94,.35);
-        color: #f5eff2;
-        font-size: 10px;
+        border: 0 !important;
+        border-radius: 50% !important;
+        background: rgba(246,232,226,.92) !important;
+        box-shadow: 0 3px 8px rgba(0,0,0,.3) !important;
+        color: #b3243f;
+
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -50%) scale(.3);
+        transition:
+            transform .28s cubic-bezier(.2,.9,.3,1.25) var(--d, 0s),
+            opacity .18s ease var(--d, 0s),
+            background .15s ease;
+    }
+
+    #${PANEL_ID}.ltt-visible .ltt-item {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1);
+    }
+
+    #${PANEL_ID} .ltt-item:active {
+        background: #fff !important;
+    }
+
+    #${PANEL_ID} .ltt-item svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    /* วงบางรอบตัวเลือก */
+    #${PANEL_ID} .ltt-item::before {
+        content: '';
+        position: absolute;
+        inset: -3px;
+        border-radius: 50%;
+        border: 1px solid rgba(246,232,226,.5);
+        pointer-events: none;
+    }
+
+    /* พู่ห้อยใต้ตัวเลือก */
+    #${PANEL_ID} .ltt-item::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: calc(100% + 3px);
+        width: 5px;
+        height: 11px;
+        transform: translateX(-50%);
+        pointer-events: none;
+        background:
+            linear-gradient(#c24a5e, #c24a5e) center top / 1px 7px no-repeat,
+            radial-gradient(circle, #c24a5e 1.6px, transparent 2px) center bottom / 5px 5px no-repeat;
+    }
+
+    #${PANEL_ID} .ltt-item-label {
+        position: absolute;
+        left: calc(100% + 9px);
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 1px 6px;
+
+        border: 1px solid rgba(194,74,94,.6);
+        border-radius: 2px;
+        background: rgba(20,18,28,.5);
+        color: #efe7ea;
+
+        font-family: Georgia, serif;
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    #${PANEL_ID}.ltt-flip .ltt-item-label {
+        left: auto;
+        right: calc(100% + 9px);
+    }
+
+    #${PANEL_ID} .ltt-count {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        min-width: 13px;
+        height: 13px;
+        padding: 0 3px;
+        box-sizing: border-box;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 7px;
+        background: #b02a45;
+        color: #fff;
+        font-size: 9px;
+        line-height: 1;
+        pointer-events: none;
     }
 `;
 
@@ -261,55 +371,57 @@ function schedulePosition() {
     positionFrame = requestAnimationFrame(() => {
         positionFrame = 0;
         positionButton();
-
-        if (panelOpen) positionPanel();
+        positionPanel();
     });
 }
 
+/*
+ * แผ่ตัวเลือกกลมเป็นส่วนโค้งรอบลูกแก้ว
+ * ปกติโค้งขึ้นด้านบน-ขวา ถ้าชิดขอบจะกลับด้านให้อัตโนมัติ
+ */
 function positionPanel() {
     const panel = document.getElementById(PANEL_ID);
     const button = document.getElementById(BUTTON_ID);
 
     if (!panel || !button) return;
 
-    // วัดขนาดจริงของแผง แม้ก่อนแสดงผล
-    panel.style.visibility = 'hidden';
-    panel.style.display = 'flex';
+    const rect = button.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
 
-    const buttonRect = button.getBoundingClientRect();
-    const panelRect = panel.getBoundingClientRect();
+    panel.style.left = `${cx}px`;
+    panel.style.top = `${cy}px`;
+
     const margin = 8;
+    const need = ARC_RADIUS + ITEM_SIZE / 2 + 12;
 
-    let left = buttonRect.left;
-    let top = buttonRect.top - panelRect.height - 6;
+    const sy = cy - need >= margin ? 1 : -1;
+    const sx = cx + need <= window.innerWidth - margin ? 1 : -1;
 
-    // ถ้าแผงสูงเกินพื้นที่ด้านบน ให้แสดงใต้ปุ่ม
-    if (top < margin) {
-        top = buttonRect.bottom + 6;
-    }
+    panel.classList.toggle('ltt-flip', sx < 0);
 
-    // ไม่ให้แผงเกินขอบจอด้านขวา
-    left = Math.min(
-        left,
-        window.innerWidth - panelRect.width - margin
-    );
+    const items = panel.querySelectorAll('.ltt-item');
+    const n = items.length;
 
-    left = Math.max(margin, left);
+    items.forEach((item, i) => {
+        const theta = (45 + ARC_STEP * (i - (n - 1) / 2)) * Math.PI / 180;
+        const x = sx * ARC_RADIUS * Math.sin(theta);
+        const y = -sy * ARC_RADIUS * Math.cos(theta);
 
-    // ป้องกันแผงเกินขอบจอด้านล่าง
-    top = Math.min(
-        top,
-        window.innerHeight - panelRect.height - margin
-    );
+        item.style.setProperty('--x', `${x.toFixed(1)}px`);
+        item.style.setProperty('--y', `${y.toFixed(1)}px`);
+        item.style.setProperty('--d', `${i * 45}ms`);
+    });
 
-    top = Math.max(margin, top);
+    const arc = panel.querySelector('.ltt-arc');
 
-    panel.style.left = `${left}px`;
-    panel.style.top = `${top}px`;
-    panel.style.visibility = '';
+    if (arc) {
+        const top = sy === 1 ? '0' : '50%';
+        const bottom = sy === 1 ? '50%' : '0';
+        const left = sx === 1 ? '50%' : '0';
+        const right = sx === 1 ? '0' : '50%';
 
-    if (!panelOpen) {
-        panel.style.display = 'none';
+        arc.style.clipPath = `inset(${top} ${right} ${bottom} ${left})`;
     }
 }
 
@@ -320,31 +432,40 @@ function createPanel() {
     panel = document.createElement('div');
     panel.id = PANEL_ID;
 
-    const lorebookButton = document.createElement('button');
-    lorebookButton.type = 'button';
-    lorebookButton.className = 'ltt-category';
+    const arc = document.createElement('div');
+    arc.className = 'ltt-arc';
+    panel.appendChild(arc);
 
-    lorebookButton.innerHTML = `
-        <span class="ltt-category-icon">♥</span>
-        <span>Lorebook</span>
-        <span class="ltt-category-count">0</span>
-    `;
+    for (const category of CATEGORIES) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'ltt-item';
+        item.dataset.id = category.id;
+        item.title = category.label;
 
-    lorebookButton.addEventListener('click', event => {
-        event.preventDefault();
-        event.stopPropagation();
+        item.innerHTML = `
+            ${category.icon}
+            <span class="ltt-item-label">${category.label}</span>
+            <span class="ltt-count">${category.count}</span>
+        `;
 
-        console.log(
-            `[${EXT_ID}] Lorebook / Trigger clicked`
-        );
+        item.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
 
-        /*
-         * เชื่อมระบบตรวจจับ Trigger จริงในขั้นตอนถัดไป
-         * ส่วนนี้ยังไม่ได้อ่านข้อมูลจาก Lorebook
-         */
-    });
+            console.log(
+                `[${EXT_ID}] ${category.label} clicked`
+            );
 
-    panel.appendChild(lorebookButton);
+            /*
+             * เชื่อมระบบตรวจจับ Trigger จริงในขั้นตอนถัดไป
+             * ส่วนนี้ยังไม่ได้อ่านข้อมูลจาก Lorebook
+             */
+        });
+
+        panel.appendChild(item);
+    }
+
     document.body.appendChild(panel);
 
     return panel;
@@ -358,23 +479,10 @@ function togglePanel() {
 
     panelOpen = !panelOpen;
 
-    if (panelOpen) {
-        panel.style.display = 'flex';
-        positionPanel();
+    positionPanel();
 
-        requestAnimationFrame(() => {
-            panel.classList.add('ltt-visible');
-            button.classList.add('ltt-active');
-            positionPanel();
-        });
-    } else {
-        panel.classList.remove('ltt-visible');
-        button.classList.remove('ltt-active');
-
-        setTimeout(() => {
-            if (!panelOpen) panel.style.display = 'none';
-        }, 170);
-    }
+    panel.classList.toggle('ltt-visible', panelOpen);
+    button.classList.toggle('ltt-active', panelOpen);
 }
 
 function createButton() {
@@ -390,9 +498,16 @@ function createButton() {
 
     const gem = document.createElement('span');
     gem.className = 'ltt-gem';
-    gem.textContent = '♥';
+    gem.innerHTML = SPARK;
 
     button.appendChild(gem);
+
+    for (const cls of ['ltt-s1', 'ltt-s2']) {
+        const spark = document.createElement('span');
+        spark.className = `ltt-spark ${cls}`;
+        spark.innerHTML = SPARK;
+        button.appendChild(spark);
+    }
 
     button.addEventListener('click', event => {
         event.preventDefault();
@@ -420,10 +535,6 @@ function closePanel() {
 
     if (panel) {
         panel.classList.remove('ltt-visible');
-
-        setTimeout(() => {
-            if (!panelOpen) panel.style.display = 'none';
-        }, 170);
     }
 
     if (button) {
