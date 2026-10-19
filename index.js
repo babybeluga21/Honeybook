@@ -604,8 +604,11 @@ function addStyles() {
     #${SHEET_ID} .ltt-head {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
-        padding: 10px 8px 4px 10px;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 0 8px;
+        padding: 12px 0 6px 2px;
+        background: linear-gradient(90deg, rgba(224,120,138,.7), rgba(224,120,138,.12) 70%, transparent) left bottom / 100% 1px no-repeat;
     }
 
     #${SHEET_ID} .ltt-nav {
@@ -676,20 +679,44 @@ function addStyles() {
         color: #f6e8e2;
     }
 
-    /* บรรทัดสรุป + เส้นไล่เฉดคั่นด้านล่าง */
+    /* จำนวนรายการ (ซ้ายของแถบหัว) */
     #${SHEET_ID} .ltt-meta {
-        margin: 0 10px 5px;
-        padding: 0 0 4px;
-        color: #cdbcc4;
-        font-size: 9.5px;
-        letter-spacing: .2px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        padding: 0 0 0 2px;
+        color: #f6e8e2;
+        font-size: 10px;
+        letter-spacing: .3px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        background: linear-gradient(90deg, rgba(224,120,138,.7), rgba(224,120,138,.12) 70%, transparent) left bottom / 100% 1px no-repeat;
+    }
+
+    #${SHEET_ID} .ltt-meta::before {
+        content: '\\2726';
+        flex: none;
+        color: #e0788a;
+        font-size: 9px;
     }
 
     #${SHEET_ID} .ltt-meta:empty {
+        display: none;
+    }
+
+    /* ข้อความที่ใช้ค้นหา (บรรทัดเล็กใต้เส้น) */
+    #${SHEET_ID} .ltt-query {
+        margin: 5px 10px 0;
+        color: #bfaeb6;
+        font-size: 9px;
+        font-style: italic;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #${SHEET_ID} .ltt-query:empty {
         display: none;
     }
 
@@ -700,7 +727,7 @@ function addStyles() {
         min-height: 0;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        padding: 1px 8px 10px;
+        padding: 6px 8px 10px;
         scrollbar-width: thin;
         scrollbar-color: rgba(224,120,138,.6) transparent;
     }
@@ -1818,6 +1845,7 @@ function createSheet() {
         <span class="ltt-spk ltt-spk-c">${SPARK}</span>
         <span class="ltt-title">${SPARK}Triggers</span>
         <div class="ltt-head">
+            <span class="ltt-meta"></span>
             <span class="ltt-nav">
                 <button type="button" class="ltt-prev" aria-label="ก่อนหน้า">‹</button>
                 <span class="ltt-nav-label"></span>
@@ -1830,7 +1858,7 @@ function createSheet() {
                 <button type="button" class="ltt-close" aria-label="ปิด">✕</button>
             </span>
         </div>
-        <div class="ltt-meta"></div>
+        <div class="ltt-query"></div>
         <div class="ltt-list"></div>
     `;
 
@@ -1942,22 +1970,25 @@ function renderSheet() {
 
     const list = sheet.querySelector('.ltt-list');
     const meta = sheet.querySelector('.ltt-meta');
+    const query = sheet.querySelector('.ltt-query');
     const label = sheet.querySelector('.ltt-nav-label');
     const prev = sheet.querySelector('.ltt-prev');
     const next = sheet.querySelector('.ltt-next');
 
     list.textContent = '';
+    query.textContent = '';
 
     const indices = trackedIndices();
 
     if (!ctx || !indices.length) {
         label.textContent = '—';
-        meta.textContent = '';
+        meta.textContent = '0 รายการ';
         prev.disabled = true;
         next.disabled = true;
 
         if (liveEntries?.length) {
-            meta.textContent = `ผลล่าสุดจาก SillyTavern · ${liveEntries.length} รายการ`;
+            meta.textContent = `${liveEntries.length} รายการ`;
+            query.textContent = 'ผลล่าสุดจาก SillyTavern';
             liveEntries.forEach((item, i) => list.appendChild(renderCard(item, i)));
         } else {
             list.appendChild(makeEl(
@@ -1984,7 +2015,8 @@ function renderSheet() {
     prev.disabled = position <= 0;
     next.disabled = position >= indices.length - 1;
 
-    meta.textContent = (data.q ? `จาก “${data.q}” · ` : '') + `${items.length} รายการ`;
+    meta.textContent = `${items.length} รายการ`;
+    query.textContent = data.q ? `จาก “${data.q}”` : '';
 
     if (!items.length) {
         list.appendChild(makeEl(
