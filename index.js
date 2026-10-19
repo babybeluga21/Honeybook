@@ -1,7 +1,7 @@
-
 const EXT_ID = 'lorebook-trigger-tracker';
 const BUTTON_ID = `${EXT_ID}-button`;
 const PANEL_ID = `${EXT_ID}-panel`;
+const ORB_SIZE = 34;
 
 let initialized = false;
 let panelOpen = false;
@@ -15,242 +15,183 @@ function addStyles() {
     style.id = `${EXT_ID}-style`;
 
     style.textContent = `
-        /* ===== Floating Glass Orb ===== */
-        #${BUTTON_ID} {
-            position: fixed !important;
-            left: 8px;
-            top: 50%;
-            z-index: 999998;
+    /* ===== ลูกแก้ว ===== */
+    #${BUTTON_ID} {
+        position: fixed !important;
+        left: 8px;
+        top: 50%;
+        z-index: 999998;
 
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            margin: 0;
-            border: 1px solid rgba(245,225,235,.65);
-            border-radius: 50%;
-            outline: none;
+        width: ${ORB_SIZE}px;
+        height: ${ORB_SIZE}px;
+        padding: 0;
+        margin: 0;
+        outline: none;
 
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
-            background:
-                radial-gradient(
-                    ellipse at 30% 20%,
-                    rgba(255,245,248,.9) 0%,
-                    rgba(255,200,215,.55) 9%,
-                    transparent 28%
-                ),
-                radial-gradient(
-                    circle at 35% 28%,
-                    rgba(235,125,157,.95) 0%,
-                    rgba(157,53,91,.88) 35%,
-                    rgba(72,34,61,.96) 72%,
-                    rgba(35,28,43,.98) 100%
-                ) !important;
+        border: 1px solid rgba(225,215,235,.55) !important;
+        border-radius: 50% !important;
+        background:
+            radial-gradient(circle at 30% 26%, rgba(255,255,255,.9) 0 5%, rgba(255,255,255,.22) 13%, transparent 32%),
+            radial-gradient(circle at 50% 120%, rgba(255,160,185,.35), transparent 55%),
+            radial-gradient(circle at 50% 45%, #9a3350 0%, #6a2a48 50%, #34243f 100%) !important;
+        box-shadow:
+            inset 0 -4px 8px rgba(0,0,0,.35),
+            inset 0 2px 4px rgba(255,255,255,.25),
+            0 3px 8px rgba(0,0,0,.4) !important;
 
-            box-shadow:
-                inset 0 1px 3px rgba(255,255,255,.65),
-                inset -3px -4px 8px rgba(27,15,35,.45),
-                0 2px 8px rgba(0,0,0,.3),
-                0 0 10px rgba(194,74,94,.16) !important;
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
 
-            cursor: pointer;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+        transform: translateY(-100%);
+        transition: filter .15s ease, transform .15s ease;
+    }
 
-            transform: translateY(-100%);
-            transition:
-                box-shadow .2s ease,
-                filter .2s ease,
-                transform .15s ease,
-                border-color .2s ease;
-        }
+    /* วงจุดไข่ปลารอบลูกแก้ว (ลายลูกไม้) */
+    #${BUTTON_ID}::before {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 1px dotted rgba(245,239,242,.55);
+        pointer-events: none;
+        transition: border-color .15s ease;
+    }
 
-        #${BUTTON_ID} .ltt-orb {
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            overflow: hidden;
-            pointer-events: none;
-        }
+    #${BUTTON_ID} .ltt-gem {
+        display: block;
+        font-size: 14px;
+        line-height: 1;
+        color: #f5eff2;
+        text-shadow: 0 1px 2px rgba(0,0,0,.45);
+        pointer-events: none;
+        transition: transform .15s ease;
+    }
 
-        /* Soft glass reflection */
-        #${BUTTON_ID} .ltt-orb::before {
-            content: "";
-            position: absolute;
-            width: 19px;
-            height: 10px;
-            top: 4px;
-            left: 5px;
-            border-radius: 50%;
-            background: linear-gradient(
-                180deg,
-                rgba(255,255,255,.8),
-                rgba(255,255,255,.08)
-            );
-            filter: blur(1px);
-            transform: rotate(-35deg);
-        }
+    #${BUTTON_ID}:hover {
+        filter: brightness(1.12);
+    }
 
-        #${BUTTON_ID} .ltt-orb::after {
-            content: "";
-            position: absolute;
-            width: 7px;
-            height: 3px;
-            top: 15px;
-            left: 5px;
-            border-radius: 50%;
-            background: rgba(255,235,242,.55);
-            filter: blur(1px);
-            transform: rotate(-40deg);
-        }
+    #${BUTTON_ID}:active {
+        transform: translateY(-100%) scale(.94);
+    }
 
-        #${BUTTON_ID}:hover {
-            border-color: rgba(255,225,235,.9);
-            filter: brightness(1.12);
-            box-shadow:
-                inset 0 1px 4px rgba(255,255,255,.7),
-                0 0 12px rgba(194,74,94,.35),
-                0 3px 10px rgba(0,0,0,.3) !important;
-        }
+    #${BUTTON_ID}.ltt-active {
+        filter: brightness(1.18);
+    }
 
-        #${BUTTON_ID}:active {
-            transform: translateY(-100%) scale(.92);
-        }
+    #${BUTTON_ID}.ltt-active::before {
+        border-style: solid;
+        border-color: rgba(245,239,242,.7);
+    }
 
-        #${BUTTON_ID}.ltt-active {
-            border-color: #f3bdca;
-            box-shadow:
-                inset 0 1px 4px rgba(255,255,255,.75),
-                0 0 14px rgba(224,120,138,.48),
-                0 0 28px rgba(194,74,94,.2),
-                0 3px 10px rgba(0,0,0,.3) !important;
-        }
+    #${BUTTON_ID}.ltt-active .ltt-gem {
+        transform: scale(1.12);
+    }
 
-        /* ===== Floating Lorebook Panel ===== */
-        #${PANEL_ID} {
-            position: fixed;
-            display: none;
-            align-items: center;
-            gap: 5px;
-            padding: 5px;
+    /* ===== แผง ===== */
+    #${PANEL_ID} {
+        position: fixed;
+        display: none;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 6px 6px;
 
-            box-sizing: border-box;
-            max-width: calc(100vw - 16px);
+        box-sizing: border-box;
+        max-width: calc(100vw - 16px);
 
-            background: linear-gradient(
-                110deg,
-                rgba(100,38,58,.94),
-                rgba(48,35,52,.95) 68%,
-                rgba(36,31,45,.96)
-            );
+        background: linear-gradient(90deg, rgba(125,30,52,.55), rgba(30,28,42,.55) 65%);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
 
-            backdrop-filter: blur(14px) saturate(120%);
-            -webkit-backdrop-filter: blur(14px) saturate(120%);
+        border: 1px solid rgba(225,215,235,.4);
+        border-left: 3px solid #c24a5e;
+        border-radius: 3px;
 
-            border: 1px solid rgba(225,215,235,.4);
-            border-left: 3px solid #c24a5e;
-            border-radius: 9px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.35);
+        font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
 
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,.08),
-                0 5px 18px rgba(0,0,0,.3);
+        z-index: 999999;
+        opacity: 0;
+        transform: translateY(4px) scale(.97);
+        transform-origin: bottom left;
+        pointer-events: none;
 
-            color: #efe7ea;
-            font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
+        transition: opacity .16s ease, transform .16s ease;
+    }
 
-            z-index: 999999;
-            opacity: 0;
-            transform: translateY(4px) scale(.97);
-            transform-origin: bottom left;
-            pointer-events: none;
+    /* ลูกไม้ขอบบน */
+    #${PANEL_ID}::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: radial-gradient(circle at 4px 0, #f5eff2 2.7px, transparent 3px) 0 0/8px 5px repeat-x;
+        pointer-events: none;
+    }
 
-            transition:
-                opacity .16s ease,
-                transform .16s ease;
-        }
+    #${PANEL_ID}.ltt-visible {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
 
-        #${PANEL_ID}.ltt-visible {
-            display: flex;
-            opacity: 1;
-            transform: translateY(0) scale(1);
-            pointer-events: auto;
-        }
+    #${PANEL_ID} .ltt-category {
+        appearance: none;
+        -webkit-appearance: none;
 
-        #${PANEL_ID} .ltt-category {
-            appearance: none;
-            -webkit-appearance: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
 
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        min-height: 28px;
+        padding: 0 9px;
+        margin: 0;
 
-            min-height: 32px;
-            padding: 0 10px;
-            margin: 0;
+        border: 1px solid rgba(194,74,94,.75);
+        border-radius: 2px;
+        background: rgba(20,18,28,.35);
 
-            border: 1px solid rgba(255,220,230,.12);
-            border-radius: 6px;
+        color: #efe7ea;
+        font-family: inherit;
+        font-size: 12px;
 
-            background: linear-gradient(
-                120deg,
-                rgba(255,210,225,.09),
-                rgba(255,255,255,.025)
-            );
+        white-space: nowrap;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
 
-            color: #f3e6eb;
-            font-family: inherit;
-            font-size: 12px;
+    #${PANEL_ID} .ltt-category:active {
+        background: rgba(194,74,94,.3);
+    }
 
-            white-space: nowrap;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
+    #${PANEL_ID} .ltt-category-icon {
+        font-size: 11px;
+        color: #e0788a;
+    }
 
-            transition:
-                background .15s ease,
-                border-color .15s ease;
-        }
+    #${PANEL_ID} .ltt-category-count {
+        min-width: 15px;
+        height: 15px;
+        padding: 0 4px;
 
-        #${PANEL_ID} .ltt-category:hover {
-            background: rgba(224,120,138,.16);
-            border-color: rgba(240,170,190,.3);
-        }
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
 
-        #${PANEL_ID} .ltt-category:active {
-            background: rgba(224,120,138,.24);
-        }
-
-        #${PANEL_ID} .ltt-category-icon {
-            color: #e6a1b1;
-            font-size: 13px;
-        }
-
-        #${PANEL_ID} .ltt-category-count {
-            min-width: 15px;
-            height: 15px;
-            padding: 0 4px;
-
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-
-            border: 1px solid rgba(240,200,215,.16);
-            border-radius: 8px;
-
-            background: rgba(255,220,235,.08);
-            color: #f0c5d1;
-            font-size: 10px;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            #${BUTTON_ID},
-            #${PANEL_ID},
-            #${PANEL_ID} .ltt-category {
-                transition: none;
-            }
-        }
-    `;
+        border-radius: 8px;
+        background: rgba(194,74,94,.35);
+        color: #f5eff2;
+        font-size: 10px;
+    }
+`;
 
     document.head.appendChild(style);
 }
@@ -276,6 +217,10 @@ function findTextbox() {
     return findSendForm();
 }
 
+/*
+ * วางลูกแก้วเหนือกล่องข้อความทางซ้าย
+ * คำนวณใหม่จากตำแหน่งจริงเพื่อรองรับมือถือ
+ */
 function positionButton() {
     const button = document.getElementById(BUTTON_ID);
     const target = findTextbox();
@@ -287,22 +232,25 @@ function positionButton() {
     if (!rect.width || !rect.height) return;
 
     const margin = 8;
-    const buttonSize = button.offsetHeight || 36;
+    const buttonHeight = button.offsetHeight || ORB_SIZE;
 
     let left = rect.left;
     let top = rect.top - 4;
 
-    if (top - buttonSize < margin) {
-        top = Math.max(margin + buttonSize, rect.top + buttonSize);
+    // ถ้าพื้นที่เหนือกล่องข้อความไม่พอ
+    // ให้วางลูกแก้วไว้ภายในขอบบนของกล่องแทน
+    if (top - buttonHeight < margin) {
+        top = Math.max(margin + buttonHeight, rect.top + buttonHeight);
     }
 
+    // ป้องกันลูกแก้วหลุดขอบจอ
     left = Math.max(
         margin,
-        Math.min(left, window.innerWidth - 36 - margin)
+        Math.min(left, window.innerWidth - ORB_SIZE - margin)
     );
 
     top = Math.max(
-        buttonSize + margin,
+        buttonHeight + margin,
         Math.min(top, window.innerHeight - margin)
     );
 
@@ -329,6 +277,7 @@ function positionPanel() {
 
     if (!panel || !button) return;
 
+    // วัดขนาดจริงของแผง แม้ก่อนแสดงผล
     panel.style.visibility = 'hidden';
     panel.style.display = 'flex';
 
@@ -337,12 +286,14 @@ function positionPanel() {
     const margin = 8;
 
     let left = buttonRect.left;
-    let top = buttonRect.top - panelRect.height - 4;
+    let top = buttonRect.top - panelRect.height - 6;
 
+    // ถ้าแผงสูงเกินพื้นที่ด้านบน ให้แสดงใต้ปุ่ม
     if (top < margin) {
-        top = buttonRect.bottom + 4;
+        top = buttonRect.bottom + 6;
     }
 
+    // ไม่ให้แผงเกินขอบจอด้านขวา
     left = Math.min(
         left,
         window.innerWidth - panelRect.width - margin
@@ -350,6 +301,7 @@ function positionPanel() {
 
     left = Math.max(margin, left);
 
+    // ป้องกันแผงเกินขอบจอด้านล่าง
     top = Math.min(
         top,
         window.innerHeight - panelRect.height - margin
@@ -378,7 +330,7 @@ function createPanel() {
     lorebookButton.className = 'ltt-category';
 
     lorebookButton.innerHTML = `
-        <span class="ltt-category-icon">◉</span>
+        <span class="ltt-category-icon">♥</span>
         <span>Lorebook</span>
         <span class="ltt-category-count">0</span>
     `;
@@ -391,7 +343,10 @@ function createPanel() {
             `[${EXT_ID}] Lorebook / Trigger clicked`
         );
 
-        // เชื่อมระบบตรวจจับ Trigger จริงภายหลัง
+        /*
+         * เชื่อมระบบตรวจจับ Trigger จริงในขั้นตอนถัดไป
+         * ส่วนนี้ยังไม่ได้อ่านข้อมูลจาก Lorebook
+         */
     });
 
     panel.appendChild(lorebookButton);
@@ -438,18 +393,17 @@ function createButton() {
     button.setAttribute('aria-expanded', 'false');
     button.title = 'Lorebook Trigger Tracker';
 
-    const orb = document.createElement('span');
-    orb.className = 'ltt-orb';
-    orb.setAttribute('aria-hidden', 'true');
+    const gem = document.createElement('span');
+    gem.className = 'ltt-gem';
+    gem.textContent = '♥';
 
-    button.appendChild(orb);
+    button.appendChild(gem);
 
     button.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
 
         togglePanel();
-
         button.setAttribute(
             'aria-expanded',
             String(panelOpen)
@@ -555,5 +509,5 @@ export async function init() {
 
     schedulePosition();
 
-    console.log(`[${EXT_ID}] Glass orb initialized`);
+    console.log(`[${EXT_ID}] Floating orb initialized`);
 }
