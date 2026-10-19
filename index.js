@@ -33,7 +33,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -928,12 +928,18 @@ function bindGlobalListeners() {
  * ตรวจจับ Lorebook ที่ถูกทริกเกอร์
  * ============================================================ */
 
+// โมดูล script.js ของ SillyTavern (ใช้เป็นตัวสำรองเมื่อไม่มี getContext)
+let stModule = null;
+
 function getCtx() {
     try {
-        return globalThis.SillyTavern?.getContext?.() ?? null;
+        const ctx = globalThis.SillyTavern?.getContext?.();
+        if (ctx) return ctx;
     } catch {
-        return null;
+        // ข้าม
     }
+
+    return stModule?.chat ? { chat: stModule.chat } : null;
 }
 
 function toArray(value) {
@@ -1049,7 +1055,9 @@ const trackerState = {
     lastType: '',
     wiEvents: 0,
     lastWiCount: 0,
-    received: 0
+    received: 0,
+    quiet: 0,
+    note: ''
 };
 
 let hookAttempts = 0;
@@ -1065,6 +1073,23 @@ async function resolveEventBus() {
             types: ctx.eventTypes || ctx.event_types || {},
             via: 'context'
         };
+    }
+
+    // เหมือน extension ตัวอ้างอิง: ดึง eventSource / event_types / chat จาก script.js ตรง ๆ
+    try {
+        const mod = await import('/script.js');
+
+        if (mod?.eventSource?.on) {
+            stModule = mod;
+
+            return {
+                bus: mod.eventSource,
+                types: mod.event_types || {},
+                via: 'script.js'
+            };
+        }
+    } catch {
+        // ข้าม
     }
 
     try {
@@ -1134,26 +1159,31 @@ async function startTracking() {
         });
     };
 
-    // เริ่มสร้างคำตอบ: เริ่มเก็บทริกเกอร์ (ข้ามการนับโทเค็นและงานเบื้องหลัง)
+    // เริ่มสร้างคำตอบ: เริ่มเก็บทริกเกอร์
+    // quiet (งานเบื้องหลังของ extension อื่น เช่น สรุปความจำ) ต้อง "ไม่แตะ" สถานะเลย
+    // ของเดิมเขียนทับ capturing = false ทำให้คำตอบหลักไม่ถูกแนบผล จึงขึ้น "ไม่มีการทริกเกอร์"
     on(types.GENERATION_STARTED, 'generation_started', (type, _params, dryRun) => {
         if (dryRun) return;
 
-        capturing = type !== 'quiet';
-        pendingTriggers = null;
-
-        if (capturing) {
-            trackerState.generations += 1;
-            trackerState.lastType = String(type || 'normal');
-            trackerState.lastWiCount = 0;
+        if (type === 'quiet') {
+            trackerState.quiet += 1;
+            return;
         }
+
+        capturing = true;
+        pendingTriggers = [];
+
+        trackerState.generations += 1;
+        trackerState.lastType = String(type || 'normal');
+        trackerState.lastWiCount = 0;
+        trackerState.note = '';
     });
 
     // Lorebook ที่ถูกทริกเกอร์ในรอบนี้
     // SillyTavern อาจยิง event นี้หลายครั้งต่อหนึ่งคำตอบ จึงรวมกัน (ไม่ทับของเดิม)
+    // ไม่กรองด้วย capturing แล้ว: ถ้ามาก่อน/นอกรอบ ก็เก็บไว้ก่อน แล้วรอบใหม่จะล้างเอง
     on(types.WORLD_INFO_ACTIVATED, 'world_info_activated', payload => {
         trackerState.wiEvents += 1;
-
-        if (!capturing) return;
 
         const fresh = summarizeEntries(toEntryList(payload), getCtx()?.chat);
         const merged = new Map();
@@ -1168,15 +1198,25 @@ async function startTracking() {
 
     // คำตอบมาถึง: แนบผลทริกเกอร์ไว้กับข้อความคำตอบ
     on(types.MESSAGE_RECEIVED, 'message_received', mesId => {
-        if (!capturing) return;
+        if (!capturing) {
+            trackerState.note = 'ข้าม: ได้รับข้อความโดยไม่มีรอบสร้างคำตอบที่เปิดอยู่';
+            return;
+        }
 
         const chat = getCtx()?.chat;
-        if (!chat?.length) return;
+
+        if (!chat?.length) {
+            trackerState.note = 'ข้าม: อ่านรายการแชทไม่ได้';
+            return;
+        }
 
         const index = Number.isInteger(mesId) ? mesId : chat.length - 1;
         const message = chat[index];
 
-        if (!message || message.is_user || message.is_system) return;
+        if (!message || message.is_user || message.is_system) {
+            trackerState.note = `ข้าม: ข้อความ #${index} เป็นของผู้ใช้/ระบบ`;
+            return;
+        }
 
         let question = '';
 
@@ -1200,6 +1240,7 @@ async function startTracking() {
         pendingTriggers = null;
         viewIndex = index;
         trackerState.received += 1;
+        trackerState.note = '';
 
         updateBadge();
         if (sheetOpen) renderSheet();
@@ -1303,7 +1344,9 @@ function createSheet() {
 function appendStatus(list) {
     const text = trackerState.hooked
         ? `ติดตาม: ต่อแล้ว (${trackerState.via}) · สร้างคำตอบ ${trackerState.generations} ครั้ง` +
-          ` · พบ Lorebook ${trackerState.wiEvents} ครั้ง · แนบผล ${trackerState.received} ครั้ง`
+          ` · พบ Lorebook ${trackerState.wiEvents} ครั้ง · แนบผล ${trackerState.received} ครั้ง` +
+          ` · quiet ${trackerState.quiet}` +
+          (trackerState.note ? ` · ${trackerState.note}` : '')
         : `ติดตาม: ยังไม่ได้ต่อกับ SillyTavern (ลอง ${hookAttempts} ครั้ง)`;
 
     list.appendChild(makeEl('div', 'ltt-status', text));
