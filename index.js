@@ -20,6 +20,9 @@ const CATEGORIES = [
     { id: 'lorebook', label: 'Lorebook', icon: SPARK, count: 0, onClick: () => toggleSheet() }
 ];
 
+// แสดงแจ้งเตือนกลางจอทุกครั้งที่มี event (▶ เริ่ม / 📖 ทริกเกอร์ / ✔ แนบผล) ปิดได้โดยเปลี่ยนเป็น false
+const DEBUG_TOASTS = true;
+
 // ดูข้อความล่าสุดกี่ข้อความเพื่อหาคีย์ที่ตรง (ใช้ประมาณคีย์ที่ทำให้ทริกเกอร์)
 const SCAN_MESSAGES = 8;
 
@@ -33,7 +36,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v12';
+const VERSION = 'v15';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -333,25 +336,130 @@ function addStyles() {
         line-height: 1;
     }
 
+    /* ===== แจ้งเตือนกลางจอ (แนวนอน เล็ก) ===== */
     #${EXT_ID}-toast {
         position: fixed;
-        left: 50%;
-        bottom: 90px;
-        transform: translateX(-50%);
-        max-width: calc(100vw - 32px);
-        padding: 6px 12px;
+        left: 0;
+        right: 0;
+        top: 50%;
+        width: fit-content;
+        max-width: min(92vw, 440px);
+        margin: 0 auto;
         box-sizing: border-box;
-        border: 1px solid rgba(194,74,94,.75);
+        overflow: hidden;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 9px 16px 11px;
+
+        background: linear-gradient(90deg, rgba(125,30,52,.95), rgba(30,28,42,.97) 75%);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(246,232,226,.4);
         border-left: 3px solid #c24a5e;
-        border-radius: 2px;
-        background: rgba(30,20,30,.92);
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.45);
+
         color: #efe7ea;
         font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
-        font-size: 12px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        text-align: center;
+
         z-index: 1000001;
-        white-space: pre-line;
-        word-break: break-all;
         pointer-events: none;
+        animation: ltt-toast-in .28s cubic-bezier(.2,.9,.3,1.15) both;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-icon {
+        flex: none;
+        display: flex;
+        width: 10px;
+        height: 10px;
+        color: #e0788a;
+        animation: ltt-toast-twinkle 1.6s ease-in-out infinite alternate;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-icon svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-body {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 1px 14px;
+        min-width: 0;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-line {
+        color: #f6e8e2;
+        word-break: break-word;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2px;
+        background: #e0788a;
+        opacity: .85;
+        transform-origin: left center;
+        animation: ltt-toast-bar var(--ms, 5s) linear both;
+    }
+
+    /* แบบเตือน: โทนส้มอำพัน */
+    #${EXT_ID}-toast.ltt-toast-warn {
+        border-color: rgba(240,163,94,.6);
+        border-left-color: #f0a35e;
+    }
+
+    #${EXT_ID}-toast.ltt-toast-warn .ltt-toast-icon {
+        color: #f0a35e;
+    }
+
+    #${EXT_ID}-toast.ltt-toast-warn .ltt-toast-bar {
+        background: #f0a35e;
+    }
+
+    #${EXT_ID}-toast.ltt-toast-out {
+        animation: ltt-toast-out .26s ease forwards;
+    }
+
+    @keyframes ltt-toast-in {
+        from { opacity: 0; transform: translateY(6px) scale(.94); }
+        to   { opacity: 1; transform: none; }
+    }
+
+    @keyframes ltt-toast-out {
+        from { opacity: 1; transform: none; }
+        to   { opacity: 0; transform: translateY(-4px) scale(.96); }
+    }
+
+    @keyframes ltt-toast-bar {
+        from { transform: scaleX(1); }
+        to   { transform: scaleX(0); }
+    }
+
+    @keyframes ltt-toast-twinkle {
+        from { transform: scale(.6); opacity: .55; }
+        to   { transform: scale(1);  opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #${EXT_ID}-toast,
+        #${EXT_ID}-toast .ltt-toast-icon {
+            animation: none;
+        }
+
+        #${EXT_ID}-toast .ltt-toast-bar {
+            animation-duration: 0s;
+        }
     }
 
     /* ===== แผงแสดงทริกเกอร์ Lorebook ===== */
@@ -1079,7 +1187,10 @@ function debugEvent(text) {
     debugLog.push(text);
     while (debugLog.length > 3) debugLog.shift();
 
-    try { showToast(debugLog.join('\n'), 6000); } catch { /* ข้าม */ }
+    if (!DEBUG_TOASTS) return;
+
+    // แสดงบรรทัดเดียว (เฉพาะเหตุการณ์ล่าสุด)
+    try { showToast(text, 4000); } catch { /* ข้าม */ }
 }
 
 let hookAttempts = 0;
@@ -1184,7 +1295,6 @@ async function startTracking() {
 
         capturing = true;
         pendingTriggers = [];
-        debugEvent('▶ เริ่มสร้างคำตอบ');
 
         trackerState.generations += 1;
         trackerState.lastType = String(type || 'normal');
@@ -1209,7 +1319,7 @@ async function startTracking() {
         liveEntries = pendingTriggers;
         updateBadge(pendingTriggers.length);
         trackerState.lastWiCount = pendingTriggers.length;
-        debugEvent(`📖 Lorebook ทริกเกอร์ ${pendingTriggers.length} รายการ`);
+        debugEvent(`📖 ทริกเกอร์ ${pendingTriggers.length} รายการ`);
     });
 
     // คำตอบมาถึง: แนบผลทริกเกอร์ไว้กับข้อความคำตอบ
@@ -1258,7 +1368,8 @@ async function startTracking() {
         viewIndex = index;
         trackerState.received += 1;
         trackerState.note = '';
-        debugEvent(`✔ แนบผลกับข้อความ #${index}`);
+        // ถ้าติดแล้วจะมี toast "📖 ทริกเกอร์ N รายการ" ขึ้นไปแล้ว บอกซ้ำเฉพาะตอนไม่มีอะไรติด
+        if (!(message.extra.ltt_triggers.items.length)) debugEvent('📖 ไม่มี Lorebook ทริกเกอร์');
 
         updateBadge();
         if (sheetOpen) renderSheet();
@@ -1292,13 +1403,29 @@ function showToast(text, ms = 5000) {
 
     document.getElementById(id)?.remove();
 
-    const toast = document.createElement('div');
+    const lines = String(text).split('\n').filter(line => line.trim().length);
+    const isWarn = /^[✖⚠]/.test(lines[0] || '');
+
+    const toast = makeEl('div', isWarn ? 'ltt-toast-warn' : '');
     toast.id = id;
-    toast.textContent = text;
+    toast.style.setProperty('--ms', `${ms}ms`);
+
+    const icon = makeEl('span', 'ltt-toast-icon');
+    icon.innerHTML = SPARK;
+    toast.appendChild(icon);
+
+    const body = makeEl('div', 'ltt-toast-body');
+    lines.forEach(line => body.appendChild(makeEl('div', 'ltt-toast-line', line)));
+    toast.appendChild(body);
+
+    toast.appendChild(makeEl('div', 'ltt-toast-bar'));
+
     document.body.appendChild(toast);
 
-    placeTop(toast, Math.max(8, window.innerHeight - 90 - toast.offsetHeight));
+    // จัดให้อยู่กึ่งกลางจอ (แนวนอนใช้ margin:auto แนวตั้งวัดจากความสูงจริง)
+    placeTop(toast, Math.max(8, (window.innerHeight - toast.offsetHeight) / 2));
 
+    setTimeout(() => toast.classList.add('ltt-toast-out'), Math.max(0, ms - 260));
     setTimeout(() => toast.remove(), ms);
 }
 
