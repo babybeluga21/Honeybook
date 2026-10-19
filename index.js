@@ -33,7 +33,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v9';
+const VERSION = 'v11';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -1060,6 +1060,18 @@ const trackerState = {
     note: ''
 };
 
+// รายการล่าสุดที่ SillyTavern ส่งมา (แสดงได้แม้ยังแนบกับข้อความไม่สำเร็จ แบบเดียวกับตัวอ้างอิง)
+let liveEntries = null;
+const debugLog = [];
+
+// มือถือไม่มี devtools: แสดง event ล่าสุด 3 รายการเป็น toast ให้เห็นเลยว่า event มาถึงไหม
+function debugEvent(text) {
+    debugLog.push(text);
+    while (debugLog.length > 3) debugLog.shift();
+
+    try { showToast(debugLog.join('\n'), 6000); } catch { /* ข้าม */ }
+}
+
 let hookAttempts = 0;
 let hookTimer = 0;
 
@@ -1162,6 +1174,7 @@ async function startTracking() {
 
         capturing = true;
         pendingTriggers = [];
+        debugEvent('▶ เริ่มสร้างคำตอบ');
 
         trackerState.generations += 1;
         trackerState.lastType = String(type || 'normal');
@@ -1183,13 +1196,16 @@ async function startTracking() {
         }
 
         pendingTriggers = [...merged.values()];
+        liveEntries = pendingTriggers;
         trackerState.lastWiCount = pendingTriggers.length;
+        debugEvent(`📖 Lorebook ทริกเกอร์ ${pendingTriggers.length} รายการ`);
     });
 
     // คำตอบมาถึง: แนบผลทริกเกอร์ไว้กับข้อความคำตอบ
     on(types.MESSAGE_RECEIVED, 'message_received', mesId => {
         if (!capturing) {
             trackerState.note = 'ข้าม: ได้รับข้อความโดยไม่มีรอบสร้างคำตอบที่เปิดอยู่';
+            debugEvent('✖ ' + trackerState.note);
             return;
         }
 
@@ -1231,6 +1247,7 @@ async function startTracking() {
         viewIndex = index;
         trackerState.received += 1;
         trackerState.note = '';
+        debugEvent(`✔ แนบผลกับข้อความ #${index}`);
 
         updateBadge();
         if (sheetOpen) renderSheet();
@@ -1248,6 +1265,8 @@ async function startTracking() {
 
     trackerState.hooked = true;
     trackerState.via = via;
+
+    debugEvent(`✓ ${VERSION} ต่อ event แล้ว (${via})`);
 
     updateBadge();
 }
@@ -1399,11 +1418,16 @@ function renderSheet() {
         prev.disabled = true;
         next.disabled = true;
 
-        list.appendChild(makeEl(
-            'div',
-            'ltt-note',
-            'ไม่มีการทริกเกอร์'
-        ));
+        if (liveEntries?.length) {
+            meta.textContent = `ผลล่าสุดจาก SillyTavern · ${liveEntries.length} รายการ`;
+            liveEntries.forEach(item => list.appendChild(renderCard(item)));
+        } else {
+            list.appendChild(makeEl(
+                'div',
+                'ltt-note',
+                'ไม่มีการทริกเกอร์'
+            ));
+        }
 
         appendStatus(list);
 
@@ -1577,7 +1601,11 @@ export async function init() {
     startPositionObserver();
 
     cleanups.push(() => clearTimeout(hookTimer));
-    startTracking().catch(error => console.error(`[${EXT_ID}] tracking error`, error));
+    startTracking().catch(error => {
+        console.error(`[${EXT_ID}] tracking error`, error);
+        trackerState.note = `ต่อไม่สำเร็จ: ${error?.message || error}`;
+        showToast(`✖ ${VERSION} ${trackerState.note}`, 15000);
+    });
 
     schedulePosition();
 
