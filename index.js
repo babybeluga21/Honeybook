@@ -15,27 +15,45 @@ function addStyles() {
     style.id = `${EXT_ID}-style`;
 
     style.textContent = `
+        /* ===== Floating Glass Orb ===== */
         #${BUTTON_ID} {
             position: fixed !important;
             left: 8px;
             top: 50%;
             z-index: 999998;
 
-            width: 32px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             padding: 0;
             margin: 0;
-            border: none;
-            border-radius: 0;
+            border: 1px solid rgba(245,225,235,.65);
+            border-radius: 50%;
             outline: none;
 
             display: flex;
             align-items: center;
             justify-content: center;
 
-            background: transparent !important;
-            box-shadow: none !important;
-            color: #ff8a3d !important;
+            background:
+                radial-gradient(
+                    ellipse at 30% 20%,
+                    rgba(255,245,248,.9) 0%,
+                    rgba(255,200,215,.55) 9%,
+                    transparent 28%
+                ),
+                radial-gradient(
+                    circle at 35% 28%,
+                    rgba(235,125,157,.95) 0%,
+                    rgba(157,53,91,.88) 35%,
+                    rgba(72,34,61,.96) 72%,
+                    rgba(35,28,43,.98) 100%
+                ) !important;
+
+            box-shadow:
+                inset 0 1px 3px rgba(255,255,255,.65),
+                inset -3px -4px 8px rgba(27,15,35,.45),
+                0 2px 8px rgba(0,0,0,.3),
+                0 0 10px rgba(194,74,94,.16) !important;
 
             cursor: pointer;
             user-select: none;
@@ -43,52 +61,104 @@ function addStyles() {
 
             transform: translateY(-100%);
             transition:
-                color .15s ease,
-                opacity .15s ease,
-                transform .15s ease;
+                box-shadow .2s ease,
+                filter .2s ease,
+                transform .15s ease,
+                border-color .2s ease;
         }
 
-        #${BUTTON_ID} .ltt-arrow {
-            display: block;
-            font-family: Arial, sans-serif;
-            font-size: 38px;
-            font-weight: 300;
-            line-height: 1;
-            color: #ff8a3d;
+        #${BUTTON_ID} .ltt-orb {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            overflow: hidden;
             pointer-events: none;
         }
 
+        /* Soft glass reflection */
+        #${BUTTON_ID} .ltt-orb::before {
+            content: "";
+            position: absolute;
+            width: 19px;
+            height: 10px;
+            top: 4px;
+            left: 5px;
+            border-radius: 50%;
+            background: linear-gradient(
+                180deg,
+                rgba(255,255,255,.8),
+                rgba(255,255,255,.08)
+            );
+            filter: blur(1px);
+            transform: rotate(-35deg);
+        }
+
+        #${BUTTON_ID} .ltt-orb::after {
+            content: "";
+            position: absolute;
+            width: 7px;
+            height: 3px;
+            top: 15px;
+            left: 5px;
+            border-radius: 50%;
+            background: rgba(255,235,242,.55);
+            filter: blur(1px);
+            transform: rotate(-40deg);
+        }
+
         #${BUTTON_ID}:hover {
-            color: #ffad70 !important;
+            border-color: rgba(255,225,235,.9);
+            filter: brightness(1.12);
+            box-shadow:
+                inset 0 1px 4px rgba(255,255,255,.7),
+                0 0 12px rgba(194,74,94,.35),
+                0 3px 10px rgba(0,0,0,.3) !important;
         }
 
         #${BUTTON_ID}:active {
-            transform: translateY(-100%) translateX(2px);
+            transform: translateY(-100%) scale(.92);
         }
 
-        #${BUTTON_ID}.ltt-active .ltt-arrow {
-            color: #ffc08d;
-            text-shadow: 0 0 8px rgba(255,138,61,.3);
+        #${BUTTON_ID}.ltt-active {
+            border-color: #f3bdca;
+            box-shadow:
+                inset 0 1px 4px rgba(255,255,255,.75),
+                0 0 14px rgba(224,120,138,.48),
+                0 0 28px rgba(194,74,94,.2),
+                0 3px 10px rgba(0,0,0,.3) !important;
         }
 
+        /* ===== Floating Lorebook Panel ===== */
         #${PANEL_ID} {
             position: fixed;
             display: none;
             align-items: center;
-            gap: 3px;
-            padding: 4px;
+            gap: 5px;
+            padding: 5px;
 
             box-sizing: border-box;
             max-width: calc(100vw - 16px);
 
-            background: rgba(35,35,40,.78);
+            background: linear-gradient(
+                110deg,
+                rgba(100,38,58,.94),
+                rgba(48,35,52,.95) 68%,
+                rgba(36,31,45,.96)
+            );
+
             backdrop-filter: blur(14px) saturate(120%);
             -webkit-backdrop-filter: blur(14px) saturate(120%);
 
-            border: 1px solid rgba(255,255,255,.14);
-            border-radius: 8px;
+            border: 1px solid rgba(225,215,235,.4);
+            border-left: 3px solid #c24a5e;
+            border-radius: 9px;
 
-            box-shadow: 0 6px 20px rgba(0,0,0,.2);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.08),
+                0 5px 18px rgba(0,0,0,.3);
+
+            color: #efe7ea;
+            font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
 
             z-index: 999999;
             opacity: 0;
@@ -114,31 +184,46 @@ function addStyles() {
 
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
 
-            min-height: 30px;
-            padding: 0 9px;
+            min-height: 32px;
+            padding: 0 10px;
             margin: 0;
 
-            border: 0;
-            border-radius: 5px;
-            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,220,230,.12);
+            border-radius: 6px;
 
-            color: rgba(255,255,255,.88);
+            background: linear-gradient(
+                120deg,
+                rgba(255,210,225,.09),
+                rgba(255,255,255,.025)
+            );
+
+            color: #f3e6eb;
             font-family: inherit;
             font-size: 12px;
 
             white-space: nowrap;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+
+            transition:
+                background .15s ease,
+                border-color .15s ease;
+        }
+
+        #${PANEL_ID} .ltt-category:hover {
+            background: rgba(224,120,138,.16);
+            border-color: rgba(240,170,190,.3);
         }
 
         #${PANEL_ID} .ltt-category:active {
-            background: rgba(255,255,255,.12);
+            background: rgba(224,120,138,.24);
         }
 
         #${PANEL_ID} .ltt-category-icon {
-            font-size: 12px;
+            color: #e6a1b1;
+            font-size: 13px;
         }
 
         #${PANEL_ID} .ltt-category-count {
@@ -150,10 +235,20 @@ function addStyles() {
             align-items: center;
             justify-content: center;
 
+            border: 1px solid rgba(240,200,215,.16);
             border-radius: 8px;
-            background: rgba(255,255,255,.1);
-            color: rgba(255,255,255,.7);
+
+            background: rgba(255,220,235,.08);
+            color: #f0c5d1;
             font-size: 10px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #${BUTTON_ID},
+            #${PANEL_ID},
+            #${PANEL_ID} .ltt-category {
+                transition: none;
+            }
         }
     `;
 
@@ -181,10 +276,6 @@ function findTextbox() {
     return findSendForm();
 }
 
-/*
- * วางลูกศรเหนือกล่องข้อความทางซ้าย
- * คำนวณใหม่จากตำแหน่งจริงเพื่อรองรับมือถือ
- */
 function positionButton() {
     const button = document.getElementById(BUTTON_ID);
     const target = findTextbox();
@@ -196,25 +287,22 @@ function positionButton() {
     if (!rect.width || !rect.height) return;
 
     const margin = 8;
-    const buttonHeight = button.offsetHeight || 34;
+    const buttonSize = button.offsetHeight || 36;
 
     let left = rect.left;
     let top = rect.top - 4;
 
-    // ถ้าพื้นที่เหนือกล่องข้อความไม่พอ
-    // ให้วางลูกศรไว้ภายในขอบบนของกล่องแทน
-    if (top - buttonHeight < margin) {
-        top = Math.max(margin + buttonHeight, rect.top + buttonHeight);
+    if (top - buttonSize < margin) {
+        top = Math.max(margin + buttonSize, rect.top + buttonSize);
     }
 
-    // ป้องกันลูกศรหลุดขอบจอ
     left = Math.max(
         margin,
-        Math.min(left, window.innerWidth - 32 - margin)
+        Math.min(left, window.innerWidth - 36 - margin)
     );
 
     top = Math.max(
-        buttonHeight + margin,
+        buttonSize + margin,
         Math.min(top, window.innerHeight - margin)
     );
 
@@ -241,7 +329,6 @@ function positionPanel() {
 
     if (!panel || !button) return;
 
-    // วัดขนาดจริงของแผง แม้ก่อนแสดงผล
     panel.style.visibility = 'hidden';
     panel.style.display = 'flex';
 
@@ -252,12 +339,10 @@ function positionPanel() {
     let left = buttonRect.left;
     let top = buttonRect.top - panelRect.height - 4;
 
-    // ถ้าแผงสูงเกินพื้นที่ด้านบน ให้แสดงใต้ปุ่ม
     if (top < margin) {
         top = buttonRect.bottom + 4;
     }
 
-    // ไม่ให้แผงเกินขอบจอด้านขวา
     left = Math.min(
         left,
         window.innerWidth - panelRect.width - margin
@@ -265,7 +350,6 @@ function positionPanel() {
 
     left = Math.max(margin, left);
 
-    // ป้องกันแผงเกินขอบจอด้านล่าง
     top = Math.min(
         top,
         window.innerHeight - panelRect.height - margin
@@ -307,10 +391,7 @@ function createPanel() {
             `[${EXT_ID}] Lorebook / Trigger clicked`
         );
 
-        /*
-         * เชื่อมระบบตรวจจับ Trigger จริงในขั้นตอนถัดไป
-         * ส่วนนี้ยังไม่ได้อ่านข้อมูลจาก Lorebook
-         */
+        // เชื่อมระบบตรวจจับ Trigger จริงภายหลัง
     });
 
     panel.appendChild(lorebookButton);
@@ -357,17 +438,18 @@ function createButton() {
     button.setAttribute('aria-expanded', 'false');
     button.title = 'Lorebook Trigger Tracker';
 
-    const arrow = document.createElement('span');
-    arrow.className = 'ltt-arrow';
-    arrow.textContent = '›';
+    const orb = document.createElement('span');
+    orb.className = 'ltt-orb';
+    orb.setAttribute('aria-hidden', 'true');
 
-    button.appendChild(arrow);
+    button.appendChild(orb);
 
     button.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
 
         togglePanel();
+
         button.setAttribute(
             'aria-expanded',
             String(panelOpen)
@@ -473,5 +555,5 @@ export async function init() {
 
     schedulePosition();
 
-    console.log(`[${EXT_ID}] Floating arrow initialized`);
+    console.log(`[${EXT_ID}] Glass orb initialized`);
 }
