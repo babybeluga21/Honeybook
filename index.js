@@ -36,7 +36,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v15';
+const VERSION = 'v16';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -336,14 +336,14 @@ function addStyles() {
         line-height: 1;
     }
 
-    /* ===== แจ้งเตือนกลางจอ (แนวนอน เล็ก) ===== */
+    /* ===== แจ้งเตือนกลางล่างจอ (แนวนอน เล็ก) ===== */
     #${EXT_ID}-toast {
         position: fixed;
         left: 0;
         right: 0;
         top: 50%;
         width: fit-content;
-        max-width: min(92vw, 440px);
+        max-width: min(88vw, 360px);
         margin: 0 auto;
         box-sizing: border-box;
         overflow: hidden;
@@ -351,21 +351,21 @@ function addStyles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        padding: 9px 16px 11px;
+        gap: 7px;
+        padding: 5px 11px 7px;
 
         background: linear-gradient(90deg, rgba(125,30,52,.95), rgba(30,28,42,.97) 75%);
         -webkit-backdrop-filter: blur(12px);
         backdrop-filter: blur(12px);
         border: 1px solid rgba(246,232,226,.4);
-        border-left: 3px solid #c24a5e;
-        border-radius: 6px;
-        box-shadow: 0 8px 24px rgba(0,0,0,.45);
+        border-left: 2px solid #c24a5e;
+        border-radius: 5px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.4);
 
         color: #efe7ea;
         font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
-        font-size: 12.5px;
-        line-height: 1.5;
+        font-size: 11px;
+        line-height: 1.4;
         text-align: center;
 
         z-index: 1000001;
@@ -376,8 +376,8 @@ function addStyles() {
     #${EXT_ID}-toast .ltt-toast-icon {
         flex: none;
         display: flex;
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
         color: #e0788a;
         animation: ltt-toast-twinkle 1.6s ease-in-out infinite alternate;
     }
@@ -392,7 +392,7 @@ function addStyles() {
         flex-wrap: wrap;
         align-items: center;
         justify-content: center;
-        gap: 1px 14px;
+        gap: 1px 10px;
         min-width: 0;
     }
 
@@ -406,7 +406,7 @@ function addStyles() {
         left: 0;
         right: 0;
         bottom: 0;
-        height: 2px;
+        height: 1.5px;
         background: #e0788a;
         opacity: .85;
         transform-origin: left center;
@@ -1422,8 +1422,15 @@ function showToast(text, ms = 5000) {
 
     document.body.appendChild(toast);
 
-    // จัดให้อยู่กึ่งกลางจอ (แนวนอนใช้ margin:auto แนวตั้งวัดจากความสูงจริง)
-    placeTop(toast, Math.max(8, (window.innerHeight - toast.offsetHeight) / 2));
+    // กลางล่างของจอ: แนวนอนใช้ margin:auto แนวตั้งวางเหนือกล่องข้อความ
+    // (ถ้าหากล่องข้อความไม่เจอ ให้ห่างขอบล่าง 90px)
+    const box = typeof findTextbox === 'function' ? findTextbox() : null;
+    const boxRect = box ? box.getBoundingClientRect() : null;
+    const bottomEdge = boxRect && boxRect.width && boxRect.height
+        ? boxRect.top - 10
+        : window.innerHeight - 90;
+
+    placeTop(toast, Math.max(8, bottomEdge - toast.offsetHeight));
 
     setTimeout(() => toast.classList.add('ltt-toast-out'), Math.max(0, ms - 260));
     setTimeout(() => toast.remove(), ms);
