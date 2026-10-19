@@ -1181,7 +1181,7 @@ function renderSheet() {
         list.appendChild(makeEl(
             'div',
             'ltt-note',
-            'ยังไม่มีข้อมูล ลองส่งข้อความแล้วรอให้ตอบก่อน'
+            'ไม่มีการทริกเกอร์'
         ));
 
         return;
@@ -1221,6 +1221,14 @@ function positionSheet() {
     if (!sheet || !target) return;
 
     const rect = target.getBoundingClientRect();
+
+    // กล่องข้อความถูกซ่อน (เช่นยังไม่เข้าแชท): ใช้ตำแหน่งเริ่มต้นจาก CSS
+    if (!rect.width || !rect.height) {
+        sheet.style.bottom = '';
+        sheet.style.maxHeight = '';
+        return;
+    }
+
     const bottom = Math.max(8, window.innerHeight - rect.top + 14);
     const room = Math.max(140, rect.top - 24);
 
