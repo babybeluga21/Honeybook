@@ -1312,3 +1312,10 @@ export async function init() {
     console.log(`[${EXT_ID}] Floating orb initialized (trigger sheet v2)`);
     showToast('✓ Lorebook Tracker: โหลดไฟล์ใหม่แล้ว (v3-debug)');
 }
+
+// เริ่มทำงานเอง (SillyTavern ไม่ได้เรียก init ให้) init มีตัวกันเรียกซ้ำอยู่แล้ว
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => init());
+} else {
+    init();
+}
