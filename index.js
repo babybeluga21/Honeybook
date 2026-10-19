@@ -2,6 +2,10 @@ const EXT_ID = 'lorebook-trigger-tracker';
 const BUTTON_ID = `${EXT_ID}-button`;
 const PANEL_ID = `${EXT_ID}-panel`;
 const SHEET_ID = `${EXT_ID}-sheet`;
+const SEARCH_ID = `${EXT_ID}-search`;
+const WRITE_ID = `${EXT_ID}-write`;
+// ตัวเลือก CSS ที่ใช้ร่วมกันของหน้าต่างทั้งสามแบบ (Triggers / Search / Write)
+const WINS = `:is(#${SHEET_ID}, #${SEARCH_ID}, #${WRITE_ID})`;
 const ORB_SIZE = 23;
 
 // ขยับลูกแก้วขึ้นจากขอบกล่องข้อความ (px) ปรับเลขนี้ได้
@@ -9,15 +13,34 @@ const NUDGE_UP = 5;
 
 // ตัวเลือกกลมที่แผ่ออกมาเป็นส่วนโค้ง
 const ITEM_SIZE = 30;
-const ARC_RADIUS = 56;
-const ARC_STEP = 36;
+const ITEM_SMALL = 24; // ลูกแก้วเล็ก (ค้นหา)
+const ARC_RADIUS = 62;
+const ARC_STEP = 40;
 
 // ไอคอนประกายสี่แฉก (ใช้สีตามตัวอักษร)
 const SPARK = '<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M5 0C5.4 3.2 6.8 4.6 10 5C6.8 5.4 5.4 6.8 5 10C4.6 6.8 3.2 5.4 0 5C3.2 4.6 4.6 3.2 5 0Z"/></svg>';
 
-// เพิ่มตัวเลือกใหม่ได้ที่นี่ (แนะนำไม่เกิน 3 อัน)
+const SEARCH_ICON = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="5" r="3.4"/><path d="M7.6 7.6L10.6 10.6"/></svg>';
+const WRITE_ICON = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1.5 8V6.4C1.5 4.4 2.6 3.2 4.4 2.9V4C3.6 4.3 3.2 4.9 3.2 5.6H4.6V8H1.5ZM6.9 8V6.4C6.9 4.4 8 3.2 9.8 2.9V4C9 4.3 8.6 4.9 8.6 5.6H10V8H6.9Z"/></svg>';
+
+// เครื่องหมายที่เป็นปุ่มกดในหน้าต่าง Write — เพิ่ม/ลบ/แก้ได้ที่นี่
+// open = ตัวเปิด, close = ตัวปิด (เว้นว่างได้ ถ้าเป็นตัวเดี่ยว เช่น …)
+const QUICK_PAIRS = [
+    { open: '"', close: '"' },
+    { open: "'", close: "'" },
+    { open: '*', close: '*' },
+    { open: '(', close: ')' },
+    { open: '…', close: '' }
+];
+
+// จำนวนผลค้นหาสูงสุดที่แสดง (เรียงจากข้อความใหม่ไปเก่า)
+const SEARCH_LIMIT = 40;
+
+// ลำดับในส่วนโค้ง: ตัวแรกอยู่สูงสุด → Search (เล็ก) / Lorebook / Write
 const CATEGORIES = [
-    { id: 'lorebook', label: 'Lorebook', icon: SPARK, count: 0, onClick: () => toggleSheet() }
+    { id: 'search', label: 'Search', icon: SEARCH_ICON, small: true, onClick: () => toggleSearch() },
+    { id: 'lorebook', label: 'Lorebook', icon: SPARK, count: 0, onClick: () => toggleSheet() },
+    { id: 'write', label: 'Write', icon: WRITE_ICON, onClick: () => toggleWrite() }
 ];
 
 // แสดงแจ้งเตือนกลางจอทุกครั้งที่มี event (▶ เริ่ม / 📖 ทริกเกอร์ / ✔ แนบผล) ปิดได้โดยเปลี่ยนเป็น false
@@ -35,6 +58,8 @@ let positionObserver = null;
 let positionFrame = 0;
 
 let sheetOpen = false;
+let searchOpen = false;
+let writeOpen = false;
 let moveMode = false;
 const POS_KEY = `${EXT_ID}-sheet-pos`;
 let customPos = loadPos();
@@ -44,7 +69,7 @@ let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v17';
+const VERSION = 'v18';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -62,13 +87,15 @@ function dispose() {
         try { cleanups.pop()(); } catch { /* ข้าม */ }
     }
 
-    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`]) {
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, SEARCH_ID, WRITE_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`]) {
         document.getElementById(id)?.remove();
     }
 
     initialized = false;
     panelOpen = false;
     sheetOpen = false;
+    searchOpen = false;
+    writeOpen = false;
 }
 
 function addStyles() {
@@ -79,7 +106,7 @@ function addStyles() {
     const style = document.createElement('style');
     style.id = `${EXT_ID}-style`;
 
-    style.textContent = `
+    const baseCss = `
     /* ===== ลูกแก้ว (ป้ายครีม) ===== */
     #${BUTTON_ID} {
         position: fixed !important;
@@ -1001,6 +1028,177 @@ function addStyles() {
 
 `;
 
+    const extraCss = `
+    /* ===== ลูกแก้วเล็ก (ค้นหา) ===== */
+    #${PANEL_ID} .ltt-item.ltt-small {
+        width: ${ITEM_SMALL}px;
+        height: ${ITEM_SMALL}px;
+    }
+
+    #${PANEL_ID} .ltt-item.ltt-small svg {
+        width: 10px;
+        height: 10px;
+    }
+
+    #${PANEL_ID} .ltt-item.ltt-small::after {
+        width: 4px;
+        height: 9px;
+        background:
+            linear-gradient(#c24a5e, #c24a5e) center top / 1px 6px no-repeat,
+            radial-gradient(circle, #c24a5e 1.4px, transparent 1.8px) center bottom / 4px 4px no-repeat;
+    }
+
+    /* ป้ายของลูกแก้วเล็กวางเหนือลูกแก้ว ไม่ให้ชนป้าย/เลขของ Lorebook */
+    #${PANEL_ID} .ltt-item.ltt-small .ltt-item-label {
+        left: 2px;
+        top: auto;
+        bottom: calc(100% + 8px);
+        transform: none;
+        font-size: 8.5px;
+    }
+
+    #${PANEL_ID}.ltt-flip .ltt-item.ltt-small .ltt-item-label {
+        left: auto;
+        right: 2px;
+    }
+
+    /* ===== หน้าต่างค้นหา / Write (ส่วนที่ต่างจากหน้าต่าง Triggers) ===== */
+    ${WINS} .ltt-search-box {
+        flex: none;
+        margin: 8px 8px 0;
+    }
+
+    ${WINS} .ltt-search-input {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 6px 10px;
+        border: 1px solid rgba(224,120,138,.45);
+        border-radius: 5px;
+        background: rgba(10,8,16,.5);
+        box-shadow: none;
+        color: #f6e8e2;
+        font-family: inherit;
+        font-size: 12px;
+        line-height: 1.6;
+        outline: none;
+    }
+
+    ${WINS} .ltt-search-input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+    ${WINS} .ltt-search-input::placeholder { color: #9d8c95; }
+    ${WINS} .ltt-search-input:focus { border-color: rgba(246,232,226,.8); }
+
+    ${WINS} .ltt-hit { cursor: pointer; }
+    ${WINS} .ltt-spacer { flex: 1; }
+
+    ${WINS} .ltt-snip {
+        margin-top: 5px;
+        color: #e6d8de;
+        font-size: 10.5px;
+        line-height: 1.75;
+        word-break: break-word;
+    }
+
+    ${WINS} .ltt-snip mark {
+        padding: 0 2px;
+        border-radius: 2px;
+        background: rgba(224,120,138,.38);
+        color: #fff;
+    }
+
+    ${WINS} .ltt-act {
+        -webkit-appearance: none;
+        appearance: none;
+        flex: none;
+        margin: 0;
+        padding: 0 8px;
+        border: 1px solid rgba(246,232,226,.4) !important;
+        border-radius: 9px !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: #f6e8e2;
+        font-family: inherit;
+        font-size: 9px;
+        line-height: 15px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    ${WINS} .ltt-act:active { background: rgba(246,232,226,.2) !important; }
+
+    ${WINS} .ltt-act.ltt-confirm {
+        border-color: #e0788a !important;
+        background: #b3243f !important;
+        color: #fff;
+    }
+
+    ${WINS} .ltt-sec {
+        margin: 2px 2px 6px;
+        color: #e0788a;
+        font-size: 10px;
+        line-height: 1.8;
+        letter-spacing: .3px;
+    }
+
+    ${WINS} .ltt-sec span { color: #9d8c95; }
+
+    ${WINS} .ltt-tools {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    ${WINS} .ltt-tool {
+        -webkit-appearance: none;
+        appearance: none;
+        min-width: 38px;
+        height: 28px;
+        margin: 0;
+        padding: 0 10px;
+        border: 1px solid rgba(246,232,226,.4) !important;
+        border-radius: 6px !important;
+        background: rgba(246,232,226,.09) !important;
+        box-shadow: none !important;
+        color: #f6e8e2;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    ${WINS} .ltt-tool:active { background: rgba(246,232,226,.28) !important; }
+
+    ${WINS} .ltt-tool.ltt-wide {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+    ${WINS} .ltt-tool-tag {
+        color: #e0788a;
+        font-size: 9.5px;
+        letter-spacing: .3px;
+    }
+
+    /* ไฮไลต์ข้อความที่เลื่อนไปหา */
+    .mes.ltt-flash { animation: ltt-mes-flash 2.4s ease-out; }
+
+    @keyframes ltt-mes-flash {
+        0%, 35% { box-shadow: 0 0 0 2px rgba(224,120,138,.9), 0 0 18px rgba(224,120,138,.5); }
+        100%    { box-shadow: 0 0 0 2px rgba(224,120,138,0), 0 0 18px rgba(224,120,138,0); }
+    }
+`;
+
+    // หน้าต่าง Search / Write ใช้หน้าตาเดียวกับ Triggers: ขยายตัวเลือกของ Triggers ให้ครอบทั้งสาม
+    style.textContent = baseCss.replaceAll(`#${SHEET_ID}`, WINS) + extraCss;
+
     document.head.appendChild(style);
 }
 
@@ -1087,6 +1285,7 @@ function schedulePosition() {
         positionButton();
         positionPanel();
         positionSheet();
+        positionWins();
     });
 }
 
@@ -1154,14 +1353,14 @@ function createPanel() {
     for (const category of CATEGORIES) {
         const item = document.createElement('button');
         item.type = 'button';
-        item.className = 'ltt-item';
+        item.className = category.small ? 'ltt-item ltt-small' : 'ltt-item';
         item.dataset.id = category.id;
         item.title = category.label;
 
         item.innerHTML = `
             ${category.icon}
             <span class="ltt-item-label">${category.label}</span>
-            <span class="ltt-count">${category.count}</span>
+            ${category.count === undefined ? '' : `<span class="ltt-count">${category.count}</span>`}
         `;
 
         // กันไม่ให้การแตะแย่งโฟกัสจากกล่องข้อความ (คีย์บอร์ดปิด -> เลย์เอาต์ขยับ -> คลิกหลุด)
@@ -1220,8 +1419,8 @@ function createButton() {
         event.preventDefault();
         event.stopPropagation();
 
-        if (sheetOpen) {
-            closeSheet();
+        if (anyWinOpen()) {
+            closeAllWins();
             return;
         }
 
@@ -1250,7 +1449,7 @@ function closePanel() {
     }
 
     if (button) {
-        button.classList.toggle('ltt-active', sheetOpen);
+        button.classList.toggle('ltt-active', anyWinOpen());
         button.setAttribute('aria-expanded', 'false');
     }
 }
@@ -1351,22 +1550,26 @@ function bindGlobalListeners() {
         const panel = document.getElementById(PANEL_ID);
         const button = document.getElementById(BUTTON_ID);
         const sheet = document.getElementById(SHEET_ID);
+        const search = document.getElementById(SEARCH_ID);
+        const write = document.getElementById(WRITE_ID);
 
         if (
             panel?.contains(event.target) ||
             button?.contains(event.target) ||
-            sheet?.contains(event.target)
+            sheet?.contains(event.target) ||
+            search?.contains(event.target) ||
+            write?.contains(event.target)
         ) {
             return;
         }
 
-        if (sheetOpen) closeSheet();
+        closeAllWins();
         if (panelOpen) closePanel();
     });
 
     listen(document, 'keydown', event => {
         if (event.key === 'Escape') {
-            closeSheet();
+            closeAllWins();
             closePanel();
         }
     });
@@ -2187,6 +2390,9 @@ function positionSheet() {
 }
 
 function openSheet() {
+    closeSearch();
+    closeWrite();
+
     const sheet = createSheet();
     const button = document.getElementById(BUTTON_ID);
 
@@ -2238,14 +2444,484 @@ function closeSheet() {
 
     document.getElementById(SHEET_ID)?.classList.remove('ltt-visible');
 
-    if (!panelOpen) {
-        document.getElementById(BUTTON_ID)?.classList.remove('ltt-active');
-    }
+    syncOrb();
 }
 
 function toggleSheet() {
     if (sheetOpen) closeSheet();
     else openSheet();
+}
+
+/* ============================================================
+ * หน้าต่างค้นหาข้อความ + หน้าต่างตัวช่วยพิมพ์ (Write)
+ * ใช้หน้าตาเดียวกับหน้าต่าง Triggers (CSS ใช้ร่วมกันผ่าน :is())
+ * ============================================================ */
+
+let searchQuery = '';
+let searchTimer = 0;
+let branchTimer = 0;
+
+function anyWinOpen() {
+    return sheetOpen || searchOpen || writeOpen;
+}
+
+function syncOrb() {
+    document.getElementById(BUTTON_ID)?.classList.toggle('ltt-active', panelOpen || anyWinOpen());
+}
+
+function closeAllWins() {
+    closeSheet();
+    closeSearch();
+    closeWrite();
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// สร้างหน้าต่างเปล่าหน้าตาเดียวกับหน้าต่าง Triggers
+function createWin(id, title, bodyHtml) {
+    let win = document.getElementById(id);
+    if (win) return win;
+
+    win = document.createElement('div');
+    win.id = id;
+
+    win.innerHTML = `
+        <span class="ltt-corner ltt-c-tl"></span>
+        <span class="ltt-corner ltt-c-tr"></span>
+        <span class="ltt-corner ltt-c-bl"></span>
+        <span class="ltt-corner ltt-c-br"></span>
+        <span class="ltt-spk ltt-spk-a">${SPARK}</span>
+        <span class="ltt-spk ltt-spk-b">${SPARK}</span>
+        <span class="ltt-spk ltt-spk-c">${SPARK}</span>
+        <span class="ltt-title">${SPARK}${title}</span>
+        <div class="ltt-head">
+            <span class="ltt-meta"></span>
+            <span class="ltt-nav">
+                <button type="button" class="ltt-close" aria-label="ปิด">✕</button>
+            </span>
+        </div>
+        ${bodyHtml}
+    `;
+
+    win.querySelector('.ltt-close').addEventListener('click', event => {
+        event.stopPropagation();
+        closeAllWins();
+    });
+
+    document.body.appendChild(win);
+
+    return win;
+}
+
+// วางหน้าต่างเหนือกล่องข้อความ (เหมือนหน้าต่าง Triggers) และไม่ให้จมใต้คีย์บอร์ด
+function positionWin(win) {
+    if (!win || !win.classList.contains('ltt-visible')) return;
+
+    const target = findTextbox();
+    const rect = target ? target.getBoundingClientRect() : null;
+    const hasBox = Boolean(rect && rect.width && rect.height);
+
+    const vv = window.visualViewport;
+    const viewH = vv ? Math.min(window.innerHeight, vv.height + vv.offsetTop) : window.innerHeight;
+    const gap = 14;
+
+    const bottomEdge = hasBox ? Math.min(rect.top - gap, viewH - gap) : viewH - 80;
+    const room = Math.max(110, bottomEdge - 14);
+
+    resetCustomStyle(win);
+    win.style.maxHeight = `${Math.min(room, viewH * 0.5)}px`;
+
+    const prevTransition = win.style.transition;
+    const prevTransform = win.style.transform;
+
+    win.style.transition = 'none';
+    win.style.transform = 'none';
+
+    placeTop(win, Math.max(8, bottomEdge - win.offsetHeight));
+
+    win.style.transform = prevTransform;
+    win.style.transition = prevTransition;
+}
+
+function positionWins() {
+    positionWin(document.getElementById(SEARCH_ID));
+    positionWin(document.getElementById(WRITE_ID));
+}
+
+/* ---------- ค้นหา ---------- */
+
+function getMessageEl(index) {
+    return document.querySelector(`#chat .mes[mesid="${index}"]`);
+}
+
+function flashMessage(el) {
+    el.classList.remove('ltt-flash');
+    void el.offsetWidth;
+    el.classList.add('ltt-flash');
+    setTimeout(() => el.classList.remove('ltt-flash'), 2600);
+}
+
+// เลื่อนไปที่ข้อความ #index (ถ้ายังไม่ถูกโหลดลงหน้าจอ จะโหลดข้อความเก่าเพิ่มให้เอง)
+async function jumpToMessage(index) {
+    let el = getMessageEl(index);
+
+    if (!el) {
+        try {
+            await getCtx()?.executeSlashCommandsWithOptions?.(`/chat-jump ${index}`);
+            await sleep(300);
+            el = getMessageEl(index);
+        } catch { /* ข้าม แล้วลองวิธีถัดไป */ }
+    }
+
+    for (let n = 0; !el && n < 60; n++) {
+        const more = document.querySelector('#show_more_messages');
+        if (!more) break;
+
+        more.click();
+        await sleep(140);
+        el = getMessageEl(index);
+    }
+
+    if (!el) {
+        showToast(`✖ หาข้อความ #${index} บนหน้าจอไม่เจอ`);
+        return;
+    }
+
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    flashMessage(el);
+}
+
+// แยกสาขา (branch) จากข้อความ #index โดยไม่ต้องเลื่อนไปหา
+async function branchFromMessage(index) {
+    try {
+        const button = getMessageEl(index)?.querySelector('.mes_create_branch');
+
+        if (button) {
+            button.click();
+        } else {
+            const run = getCtx()?.executeSlashCommandsWithOptions;
+            if (typeof run !== 'function') throw new Error('ไม่พบคำสั่งแยกสาขาในเวอร์ชันนี้');
+
+            await run(`/branch-create mesId=${index}`);
+        }
+
+        showToast(`✓ แยกสาขาจากข้อความ #${index} แล้ว`);
+    } catch (error) {
+        console.error(`[${EXT_ID}] branch error`, error);
+        showToast(`✖ แยกสาขาไม่สำเร็จ: ${error?.message || error}`);
+    }
+}
+
+function flatText(message) {
+    return String(message?.mes ?? '').replace(/\s+/g, ' ').trim();
+}
+
+// ตัดข้อความรอบคำที่เจอ พร้อมไฮไลต์ (สร้างด้วย DOM ไม่ใช้ innerHTML)
+function makeSnippet(text, needle) {
+    const box = makeEl('div', 'ltt-snip');
+    const at = needle ? text.toLowerCase().indexOf(needle) : -1;
+
+    if (at < 0) {
+        box.textContent = text.slice(0, 90) + (text.length > 90 ? '…' : '');
+        return box;
+    }
+
+    const start = Math.max(0, at - 28);
+    const end = Math.min(text.length, at + needle.length + 52);
+
+    if (start > 0) box.appendChild(document.createTextNode('…'));
+    box.appendChild(document.createTextNode(text.slice(start, at)));
+    box.appendChild(makeEl('mark', '', text.slice(at, at + needle.length)));
+    box.appendChild(document.createTextNode(text.slice(at + needle.length, end)));
+    if (end < text.length) box.appendChild(document.createTextNode('…'));
+
+    return box;
+}
+
+function makeAction(label, onClick) {
+    const button = makeEl('button', 'ltt-act', label);
+    button.type = 'button';
+
+    button.addEventListener('click', event => {
+        event.stopPropagation();
+        onClick(button);
+    });
+
+    return button;
+}
+
+function renderHit(chat, index, needle, order) {
+    const message = chat[index];
+
+    const card = makeEl('div', 'ltt-card ltt-hit');
+    card.style.setProperty('--i', String(Math.min(order, 8)));
+
+    // ข้อความของผู้ใช้ = กรอบทอง / ตัวละคร = กรอบชมพู
+    if (message?.is_user) card.classList.add('ltt-const');
+
+    const top = makeEl('div', 'ltt-card-top');
+    top.appendChild(makeEl('span', 'ltt-num', `#${index}`));
+    if (message?.name) top.appendChild(makeEl('span', 'ltt-book', message.name));
+    top.appendChild(makeEl('span', 'ltt-spacer'));
+
+    top.appendChild(makeAction('ไปที่', () => {
+        closeSearch();
+        jumpToMessage(index);
+    }));
+
+    // แตะครั้งแรก = ขอยืนยัน, แตะอีกครั้งภายใน 3 วินาที = สร้างสาขา
+    top.appendChild(makeAction('แยกสาขา', button => {
+        if (!button.classList.contains('ltt-confirm')) {
+            button.classList.add('ltt-confirm');
+            button.textContent = 'ยืนยัน?';
+
+            clearTimeout(branchTimer);
+            branchTimer = setTimeout(() => {
+                button.classList.remove('ltt-confirm');
+                button.textContent = 'แยกสาขา';
+            }, 3000);
+
+            return;
+        }
+
+        clearTimeout(branchTimer);
+        closeSearch();
+        branchFromMessage(index);
+    }));
+
+    card.appendChild(top);
+    card.appendChild(makeSnippet(flatText(message), needle));
+
+    card.addEventListener('click', () => {
+        closeSearch();
+        jumpToMessage(index);
+    });
+
+    return card;
+}
+
+function runSearch() {
+    const win = document.getElementById(SEARCH_ID);
+    if (!win) return;
+
+    const list = win.querySelector('.ltt-list');
+    const meta = win.querySelector('.ltt-meta');
+    const chat = getCtx()?.chat || [];
+    const query = searchQuery.trim();
+
+    list.textContent = '';
+    list.scrollTop = 0;
+
+    if (!query) {
+        meta.textContent = chat.length ? `${chat.length} ข้อความในแชท` : '';
+        list.appendChild(makeEl('div', 'ltt-note', 'พิมพ์คำที่อยากหา หรือพิมพ์ #เลขข้อความ'));
+        positionWin(win);
+        return;
+    }
+
+    const numberMatch = query.match(/^#(\d+)$/);
+    const needle = numberMatch ? '' : query.toLowerCase();
+    const hits = [];
+
+    if (numberMatch) {
+        const index = Number(numberMatch[1]);
+        if (chat[index]) hits.push(index);
+    } else {
+        for (let index = chat.length - 1; index >= 0; index--) {
+            if (flatText(chat[index]).toLowerCase().includes(needle)) hits.push(index);
+        }
+    }
+
+    meta.textContent = hits.length
+        ? (hits.length > SEARCH_LIMIT ? `พบ ${hits.length} · แสดง ${SEARCH_LIMIT} ล่าสุด` : `พบ ${hits.length} ข้อความ`)
+        : 'ไม่พบ';
+
+    if (!hits.length) {
+        list.appendChild(makeEl('div', 'ltt-note', 'ไม่พบข้อความที่ตรงกัน'));
+    } else {
+        hits.slice(0, SEARCH_LIMIT).forEach((index, order) => {
+            list.appendChild(renderHit(chat, index, needle, order));
+        });
+    }
+
+    positionWin(win);
+}
+
+function createSearchWin() {
+    const existing = document.getElementById(SEARCH_ID);
+    if (existing) return existing;
+
+    const win = createWin(SEARCH_ID, 'Search', `
+        <div class="ltt-search-box">
+            <input type="search" class="ltt-search-input" placeholder="ค้นหาในแชท…" autocomplete="off" enterkeyhint="search">
+        </div>
+        <div class="ltt-list"></div>
+    `);
+
+    const input = win.querySelector('.ltt-search-input');
+
+    input.addEventListener('input', () => {
+        searchQuery = input.value;
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(runSearch, 160);
+    });
+
+    // Enter = เก็บคีย์บอร์ดเพื่อให้เห็นผลลัพธ์เต็มจอ
+    input.addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        clearTimeout(searchTimer);
+        runSearch();
+        input.blur();
+    });
+
+    cleanups.push(() => clearTimeout(searchTimer));
+
+    return win;
+}
+
+function openSearch() {
+    closeSheet();
+    closeWrite();
+
+    const win = createSearchWin();
+
+    searchOpen = true;
+    win.classList.add('ltt-visible');
+    syncOrb();
+
+    win.querySelector('.ltt-search-input').value = searchQuery;
+
+    runSearch();
+    positionWin(win);
+
+    setTimeout(() => win.querySelector('.ltt-search-input')?.focus(), 80);
+}
+
+function closeSearch() {
+    if (!searchOpen) return;
+
+    searchOpen = false;
+    document.getElementById(SEARCH_ID)?.classList.remove('ltt-visible');
+    syncOrb();
+}
+
+function toggleSearch() {
+    if (searchOpen) closeSearch();
+    else openSearch();
+}
+
+/* ---------- Write: ปุ่มแทรกเครื่องหมาย + ชื่อผู้ใช้ ---------- */
+
+function userName() {
+    const name = getCtx()?.name1;
+    return name && String(name).trim() ? String(name).trim() : '';
+}
+
+// แทรกที่ตำแหน่งเคอร์เซอร์ ถ้ามีข้อความที่เลือกไว้จะครอบให้ แล้ววางเคอร์เซอร์ไว้ตรงกลางคู่
+function insertAtCursor(open, close = '') {
+    const box = document.querySelector('#send_textarea') || findTextbox();
+
+    if (!box || typeof box.value !== 'string') {
+        showToast('✖ หากล่องข้อความไม่เจอ');
+        return;
+    }
+
+    const value = box.value;
+    const start = box.selectionStart ?? value.length;
+    const end = box.selectionEnd ?? start;
+    const selected = value.slice(start, end);
+
+    box.value = value.slice(0, start) + open + selected + close + value.slice(end);
+
+    const caret = selected
+        ? start + open.length + selected.length + close.length
+        : start + open.length;
+
+    box.setSelectionRange(caret, caret);
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    box.focus({ preventScroll: true });
+}
+
+function makeTool(label, onClick) {
+    const button = makeEl('button', 'ltt-tool', label);
+    button.type = 'button';
+
+    // ไม่ให้ปุ่มแย่งโฟกัสจากกล่องข้อความ (คีย์บอร์ดจะได้ไม่ปิด และเคอร์เซอร์ไม่หาย)
+    button.addEventListener('mousedown', event => event.preventDefault());
+    button.addEventListener('click', event => {
+        event.stopPropagation();
+        onClick(button);
+    });
+
+    return button;
+}
+
+function createWriteWin() {
+    const existing = document.getElementById(WRITE_ID);
+    if (existing) return existing;
+
+    const win = createWin(WRITE_ID, 'Write', `
+        <div class="ltt-list">
+            <div class="ltt-sec">เครื่องหมาย <span>· เลือกข้อความไว้จะครอบให้</span></div>
+            <div class="ltt-tools ltt-pairs"></div>
+            <div class="ltt-sec">ชื่อ</div>
+            <div class="ltt-tools ltt-names"></div>
+        </div>
+    `);
+
+    const pairs = win.querySelector('.ltt-pairs');
+
+    for (const pair of QUICK_PAIRS) {
+        const label = pair.close ? `${pair.open} ${pair.close}` : pair.open;
+        pairs.appendChild(makeTool(label, () => insertAtCursor(pair.open, pair.close)));
+    }
+
+    win.querySelector('.ltt-meta').textContent = 'ตัวช่วยพิมพ์';
+
+    return win;
+}
+
+// ชื่อผู้ใช้เปลี่ยนได้ (เปลี่ยน persona) จึงสร้างปุ่มชื่อใหม่ทุกครั้งที่เปิด
+function refreshNames(win) {
+    const names = win.querySelector('.ltt-names');
+    names.textContent = '';
+
+    const name = userName();
+    const button = makeTool(name || '{{user}}', () => insertAtCursor(name || '{{user}}'));
+    button.classList.add('ltt-wide');
+
+    names.appendChild(makeEl('span', 'ltt-tool-tag', 'ผู้ใช้'));
+    names.appendChild(button);
+}
+
+function openWrite() {
+    closeSheet();
+    closeSearch();
+
+    const win = createWriteWin();
+
+    writeOpen = true;
+    win.classList.add('ltt-visible');
+    syncOrb();
+
+    refreshNames(win);
+    positionWin(win);
+}
+
+function closeWrite() {
+    if (!writeOpen) return;
+
+    writeOpen = false;
+    document.getElementById(WRITE_ID)?.classList.remove('ltt-visible');
+    syncOrb();
+}
+
+function toggleWrite() {
+    if (writeOpen) closeWrite();
+    else openWrite();
 }
 
 export async function init() {
@@ -2272,7 +2948,7 @@ export async function init() {
     globalThis[DISPOSE_KEY] = dispose;
 
     // ลบของเก่าที่ค้างอยู่ก่อนสร้างใหม่ ให้ปุ่ม/แผงทุกชิ้นเป็นของไฟล์นี้ล้วน
-    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID]) {
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, SEARCH_ID, WRITE_ID]) {
         document.getElementById(id)?.remove();
     }
 
