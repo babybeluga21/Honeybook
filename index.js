@@ -48,12 +48,12 @@ function addStyles() {
         align-items: center;
         justify-content: center;
 
-        border: 1px solid rgba(225,215,235,.35) !important;
+        border: 1px solid rgba(255,235,242,.6) !important;
         border-radius: 50% !important;
-        background: linear-gradient(135deg, rgba(125,30,52,.3), rgba(30,28,42,.22) 70%) !important;
+        background: linear-gradient(135deg, rgba(255,190,210,.42), rgba(190,150,215,.3)) !important;
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        box-shadow: 0 3px 10px rgba(0,0,0,.25) !important;
+        box-shadow: 0 3px 8px rgba(0,0,0,.2) !important;
 
         cursor: pointer;
         user-select: none;
@@ -63,13 +63,13 @@ function addStyles() {
         transition: border-color .15s ease, transform .15s ease;
     }
 
-    /* วงจุดไข่ปลารอบลูกแก้ว (ลายลูกไม้) */
+    /* วงเส้นบางรอบลูกแก้ว */
     #${BUTTON_ID}::before {
         content: '';
         position: absolute;
         inset: -3px;
         border-radius: 50%;
-        border: 1px dotted rgba(245,239,242,.5);
+        border: 1px solid rgba(255,235,242,.5);
         pointer-events: none;
         transition: border-color .15s ease;
     }
@@ -83,7 +83,7 @@ function addStyles() {
     }
 
     #${BUTTON_ID}:hover {
-        border-color: rgba(245,239,242,.7) !important;
+        border-color: rgba(255,255,255,.85) !important;
     }
 
     #${BUTTON_ID}:active {
@@ -91,7 +91,7 @@ function addStyles() {
     }
 
     #${BUTTON_ID}.ltt-active {
-        background: linear-gradient(135deg, rgba(160,40,65,.5), rgba(30,28,42,.28) 70%) !important;
+        background: linear-gradient(135deg, rgba(255,150,180,.6), rgba(210,100,150,.42)) !important;
     }
 
     /* ตอนเปิด: วงลูกปัดหมุนช้า ๆ + ประกายกระพริบ + ไอคอนหมุนเป็นสีชมพู */
@@ -102,7 +102,7 @@ function addStyles() {
     }
 
     #${BUTTON_ID}.ltt-active .ltt-gem {
-        color: #ffd0dc;
+        color: #fff;
         transform: scale(1.12) rotate(90deg);
     }
 
