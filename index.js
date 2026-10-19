@@ -818,9 +818,10 @@ function addStyles() {
     #${SHEET_ID} .ltt-card {
         position: relative;
         flex: none;
-        padding: 5px 7px 6px 11px;
-        border: 1px solid rgba(224,120,138,.32);
-        border-radius: 3px;
+        --ltt-c: 224,120,138;
+        padding: 7px 10px 7px 10px;
+        border: 1px solid rgba(var(--ltt-c), .3);
+        border-radius: 5px;
         background: linear-gradient(135deg, rgba(10,8,16,.55), rgba(10,8,16,.3));
         box-shadow: inset 0 1px 0 rgba(246,232,226,.05);
         overflow: hidden;
@@ -828,23 +829,28 @@ function addStyles() {
         animation-delay: calc(var(--i, 0) * 45ms);
     }
 
+    /* มุมกรอบ 4 มุม (ตัวแทนแถบด้านซ้ายเดิม) */
     #${SHEET_ID} .ltt-card::before {
         content: '';
         position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 3px;
-        background: linear-gradient(180deg, #e0788a, #b3243f);
+        inset: 3px;
+        pointer-events: none;
+        background:
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top left / 9px 1px no-repeat,
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top left / 1px 9px no-repeat,
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top right / 9px 1px no-repeat,
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top right / 1px 9px no-repeat,
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom left / 9px 1px no-repeat,
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom left / 1px 9px no-repeat,
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom right / 9px 1px no-repeat,
+            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom right / 1px 9px no-repeat;
+        opacity: .85;
     }
 
-    /* constant = แถบทอง */
+    /* constant = กรอบทอง */
     #${SHEET_ID} .ltt-card.ltt-const {
-        border-color: rgba(232,194,122,.38);
-    }
-
-    #${SHEET_ID} .ltt-card.ltt-const::before {
-        background: linear-gradient(180deg, #f4dba2, #c9953f);
+        --ltt-c: 232,194,122;
+        border-color: rgba(232,194,122,.34);
     }
 
     /* ไม่พบคีย์: เส้นประ จางลง */
