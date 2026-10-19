@@ -33,8 +33,37 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
+const VERSION = 'v4';
+const DISPOSE_KEY = '__lttDispose';
+const LOADED_KEY = '__lttLoadedFrom';
+
+// เก็บตัวถอด listener ทั้งหมดไว้ เพื่อให้ถอนตัวเองได้เมื่อมีสำเนาใหม่มาแทน
+const cleanups = [];
+let lastActivate = 0;
+
+function listen(target, type, handler, options) {
+    target.addEventListener(type, handler, options);
+    cleanups.push(() => target.removeEventListener(type, handler, options));
+}
+
+function dispose() {
+    while (cleanups.length) {
+        try { cleanups.pop()(); } catch { /* ข้าม */ }
+    }
+
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`]) {
+        document.getElementById(id)?.remove();
+    }
+
+    initialized = false;
+    panelOpen = false;
+    sheetOpen = false;
+}
+
 function addStyles() {
-    if (document.getElementById(`${EXT_ID}-style`)) return;
+    // ใส่ CSS ใหม่ทุกครั้ง: ถ้ามี style ของไฟล์เก่า/สำเนาซ้ำโหลดมาก่อน
+    // แล้วข้ามไป หน้าต่างจะไม่มี CSS และหลุดไปอยู่ใต้หน้าแชทแบบมองไม่เห็น
+    document.getElementById(`${EXT_ID}-style`)?.remove();
 
     const style = document.createElement('style');
     style.id = `${EXT_ID}-style`;
@@ -320,6 +349,8 @@ function addStyles() {
         font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
         font-size: 12px;
         z-index: 1000001;
+        white-space: pre-line;
+        word-break: break-all;
         pointer-events: none;
     }
 
@@ -678,22 +709,8 @@ function createPanel() {
             <span class="ltt-count">${category.count}</span>
         `;
 
-        item.addEventListener('click', event => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            try {
-                // ปิดวงตัวเลือกก่อน แล้วค่อยทำงานของตัวเลือกนั้น
-                closePanel();
-
-                if (typeof category.onClick === 'function') {
-                    category.onClick();
-                }
-            } catch (error) {
-                console.error(`[${EXT_ID}] ${category.label} error`, error);
-                showToast(`${category.label}: ${error?.message || error}`);
-            }
-        });
+        // กันไม่ให้การแตะแย่งโฟกัสจากกล่องข้อความ (คีย์บอร์ดปิด -> เลย์เอาต์ขยับ -> คลิกหลุด)
+        item.addEventListener('mousedown', event => event.preventDefault());
 
         panel.appendChild(item);
     }
@@ -740,6 +757,8 @@ function createButton() {
         spark.innerHTML = SPARK;
         button.appendChild(spark);
     }
+
+    button.addEventListener('mousedown', event => event.preventDefault());
 
     button.addEventListener('click', event => {
         event.preventDefault();
@@ -792,86 +811,86 @@ function startPositionObserver() {
         subtree: true
     });
 
-    window.addEventListener('resize', schedulePosition, {
-        passive: true
-    });
+    cleanups.push(() => positionObserver?.disconnect());
 
-    window.addEventListener('scroll', schedulePosition, {
-        passive: true,
-        capture: true
-    });
-
-    window.addEventListener('orientationchange', () => {
-        setTimeout(schedulePosition, 150);
-    });
+    listen(window, 'resize', schedulePosition, { passive: true });
+    listen(window, 'scroll', schedulePosition, { passive: true, capture: true });
+    listen(window, 'orientationchange', () => setTimeout(schedulePosition, 150));
 
     if (window.visualViewport) {
-        window.visualViewport.addEventListener(
-            'resize',
-            schedulePosition,
-            { passive: true }
-        );
-
-        window.visualViewport.addEventListener(
-            'scroll',
-            schedulePosition,
-            { passive: true }
-        );
+        listen(window.visualViewport, 'resize', schedulePosition, { passive: true });
+        listen(window.visualViewport, 'scroll', schedulePosition, { passive: true });
     }
 }
 
-document.addEventListener('click', event => {
-    const panel = document.getElementById(PANEL_ID);
-    const button = document.getElementById(BUTTON_ID);
-    const sheet = document.getElementById(SHEET_ID);
+/*
+ * แตะตัวเลือกกลม
+ * ใช้ pointerup (รู้เป้าหมายตั้งแต่ตอนยกนิ้ว ไม่โดนเลย์เอาต์ขยับตอนคีย์บอร์ดปิดแย่งไป)
+ * และ click เป็นตัวสำรอง ทั้งคู่ผ่านตัวกันซ้ำตัวเดียวกัน
+ */
+function activateItem(item) {
+    const now = Date.now();
 
-    if (
-        panel?.contains(event.target) ||
-        button?.contains(event.target) ||
-        sheet?.contains(event.target)
-    ) {
-        return;
-    }
-
-    if (sheetOpen) closeSheet();
-    if (panelOpen) closePanel();
-});
-
-document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
-        closeSheet();
-        closePanel();
-    }
-});
-
-// ตัวรับคลิกสำรอง: ดักตั้งแต่ขั้น capture กันกรณีปุ่มวงกลมไม่รับคลิก
-window.addEventListener('click', event => {
-    const item = event.target?.closest?.(`#${PANEL_ID} .ltt-item`);
-    if (!item) return;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
+    if (now - lastActivate < 450) return;
+    lastActivate = now;
 
     const category = CATEGORIES.find(c => c.id === item.dataset.id);
 
     try {
         closePanel();
+
         if (typeof category?.onClick === 'function') category.onClick();
     } catch (error) {
-        console.error(`[${EXT_ID}] error`, error);
+        console.error(`[${EXT_ID}] ${category?.label} error`, error);
         showToast(`${category?.label}: ${error?.message || error}`);
     }
-}, true);
+}
 
-// DEBUG ชั่วคราว: ตอนวงตัวเลือกเปิดอยู่ ให้บอกว่านิ้วแตะโดนอะไร (เอาออกได้ภายหลัง)
-window.addEventListener('pointerdown', event => {
-    if (!panelOpen) return;
+function onItemTap(event) {
+    const item = event.target?.closest?.(`#${PANEL_ID} .ltt-item`);
+    if (!item) return;
 
-    const t = event.target;
-    const cls = typeof t?.className === 'string' ? t.className.split(' ')[0] : '';
+    if (event.type === 'pointerup' && event.button > 0) return;
 
-    showToast(`DEBUG แตะโดน: ${t?.tagName}${t?.id ? '#' + t.id : ''}${cls ? '.' + cls : ''}`);
-}, true);
+    event.preventDefault();
+
+    // click ปล่อยให้ผ่านไปไม่ได้ ไม่งั้นเดี๋ยวตัวอื่นมาสลับสถานะซ้ำ
+    if (event.type === 'click') event.stopImmediatePropagation();
+
+    activateItem(item);
+}
+
+function bindGlobalListeners() {
+    listen(window, 'pointerup', onItemTap, true);
+    listen(window, 'click', onItemTap, true);
+
+    listen(document, 'click', event => {
+        // คลิกที่ตามหลังการเลือกตัวเลือกหยก ๆ ห้ามนับเป็นการแตะข้างนอก
+        if (Date.now() - lastActivate < 450) return;
+
+        const panel = document.getElementById(PANEL_ID);
+        const button = document.getElementById(BUTTON_ID);
+        const sheet = document.getElementById(SHEET_ID);
+
+        if (
+            panel?.contains(event.target) ||
+            button?.contains(event.target) ||
+            sheet?.contains(event.target)
+        ) {
+            return;
+        }
+
+        if (sheetOpen) closeSheet();
+        if (panelOpen) closePanel();
+    });
+
+    listen(document, 'keydown', event => {
+        if (event.key === 'Escape') {
+            closeSheet();
+            closePanel();
+        }
+    });
+}
 
 
 /* ============================================================
@@ -1000,8 +1019,18 @@ function startTracking() {
     }
 
     const types = ctx.eventTypes || {};
-    const on = (name, fallback, handler) =>
-        ctx.eventSource.on(name ?? fallback, handler);
+    const on = (name, fallback, handler) => {
+        const eventName = name ?? fallback;
+        const bus = ctx.eventSource;
+
+        bus.on(eventName, handler);
+
+        cleanups.push(() => {
+            try {
+                (bus.removeListener || bus.off)?.call(bus, eventName, handler);
+            } catch { /* ข้าม */ }
+        });
+    };
 
     // เริ่มสร้างคำตอบ: เริ่มเก็บทริกเกอร์ (ข้ามการนับโทเค็นและงานเบื้องหลัง)
     on(types.GENERATION_STARTED, 'generation_started', (type, _params, dryRun) => {
@@ -1077,7 +1106,7 @@ function startTracking() {
  * แผงแสดงรายการทริกเกอร์
  * ============================================================ */
 
-function showToast(text) {
+function showToast(text, ms = 5000) {
     const id = `${EXT_ID}-toast`;
 
     document.getElementById(id)?.remove();
@@ -1087,7 +1116,7 @@ function showToast(text) {
     toast.textContent = text;
     document.body.appendChild(toast);
 
-    setTimeout(() => toast.remove(), 5000);
+    setTimeout(() => toast.remove(), ms);
 }
 
 function makeEl(tag, className, text) {
@@ -1258,11 +1287,14 @@ function positionSheet() {
         return;
     }
 
-    const bottom = Math.max(8, window.innerHeight - rect.top + 14);
+    // position: fixed อิงความสูง layout viewport (clientHeight) ไม่ใช่ innerHeight
+    // บนมือถือสองค่านี้ต่างกันได้เมื่อแถบ URL/คีย์บอร์ดขยับ
+    const viewH = document.documentElement.clientHeight || window.innerHeight;
+    const bottom = Math.max(8, viewH - rect.top + 14);
     const room = Math.max(140, rect.top - 24);
 
     sheet.style.bottom = `${bottom}px`;
-    sheet.style.maxHeight = `${Math.min(room, window.innerHeight * 0.6)}px`;
+    sheet.style.maxHeight = `${Math.min(room, viewH * 0.6)}px`;
 }
 
 function openSheet() {
@@ -1277,6 +1309,33 @@ function openSheet() {
 
     renderSheet();
     positionSheet();
+    verifySheet();
+}
+
+// เช็คว่าหน้าต่างขึ้นบนจอจริงไหม ถ้าไม่ขึ้นให้บอกสาเหตุบนจอเลย (มือถือไม่มี devtools)
+function verifySheet() {
+    setTimeout(() => {
+        const sheet = document.getElementById(SHEET_ID);
+        if (!sheet || !sheetOpen) return;
+
+        const cs = getComputedStyle(sheet);
+        const r = sheet.getBoundingClientRect();
+        const viewH = document.documentElement.clientHeight;
+        const viewW = document.documentElement.clientWidth;
+
+        const offscreen =
+            r.width < 10 || r.height < 10 ||
+            r.bottom <= 0 || r.top >= viewH ||
+            r.right <= 0 || r.left >= viewW;
+
+        if (cs.position !== 'fixed' || cs.visibility !== 'visible' || offscreen) {
+            showToast(
+                `หน้าต่างไม่แสดง: position=${cs.position}, visibility=${cs.visibility}, ` +
+                `y=${Math.round(r.top)}/${viewH} — น่าจะมี extension ซ้ำหรือ CSS อื่นทับ`,
+                10000
+            );
+        }
+    }, 320);
 }
 
 function closeSheet() {
@@ -1299,18 +1358,55 @@ function toggleSheet() {
 export async function init() {
     if (initialized) return;
 
+    // ถ้ามีสำเนาใหม่ (v4+) ของตัวเองโหลดค้างอยู่ ให้เก็บกวาดแล้วเข้ามาแทน
+    // ถ้ามีของอยู่แต่ไม่มีตัวถอน แปลว่าเป็นสำเนาเก่าที่ถอดไม่ได้
+    const previous = globalThis[DISPOSE_KEY];
+    const foreign = typeof previous !== 'function' && Boolean(
+        document.getElementById(BUTTON_ID) ||
+        document.getElementById(`${EXT_ID}-style`)
+    );
+
+    if (typeof previous === 'function') {
+        try { previous(); } catch { /* ข้าม */ }
+    }
+
     initialized = true;
+
+    // บันทึกว่าไฟล์นี้ถูกโหลดจากที่ไหนบ้าง (ใช้เช็คโฟลเดอร์ซ้ำ)
+    const loaded = (globalThis[LOADED_KEY] = globalThis[LOADED_KEY] || []);
+    loaded.push(import.meta.url);
+
+    globalThis[DISPOSE_KEY] = dispose;
+
+    // ลบของเก่าที่ค้างอยู่ก่อนสร้างใหม่ ให้ปุ่ม/แผงทุกชิ้นเป็นของไฟล์นี้ล้วน
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID]) {
+        document.getElementById(id)?.remove();
+    }
 
     addStyles();
     createPanel();
     createButton();
+    bindGlobalListeners();
     startPositionObserver();
     startTracking();
 
     schedulePosition();
 
-    console.log(`[${EXT_ID}] Floating orb initialized (trigger sheet v2)`);
-    showToast('✓ Lorebook Tracker: โหลดไฟล์ใหม่แล้ว (v3-debug)');
+    console.log(`[${EXT_ID}] ${VERSION} loaded from ${import.meta.url}`);
+
+    const paths = [...new Set(loaded)].map(u => {
+        try { return new URL(u).pathname; } catch { return u; }
+    });
+
+    if (foreign || paths.length > 1) {
+        showToast(
+            `⚠ Lorebook Tracker ถูกโหลดซ้ำ — ลบโฟลเดอร์ที่ไม่ใช้ออก\n` +
+            (paths.length > 1 ? paths.join('\n') : 'พบสำเนาเก่าค้างอยู่ในหน้า'),
+            14000
+        );
+    } else {
+        showToast(`✓ Lorebook Tracker ${VERSION} โหลดแล้ว`);
+    }
 }
 
 // เริ่มทำงานเอง (SillyTavern ไม่ได้เรียก init ให้) init มีตัวกันเรียกซ้ำอยู่แล้ว
