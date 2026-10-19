@@ -32,23 +32,19 @@ function addStyles() {
         align-items: center;
         justify-content: center;
 
-        border: 1px solid rgba(225,215,235,.55) !important;
+        border: 1px solid rgba(225,215,235,.4) !important;
         border-radius: 50% !important;
-        background:
-            radial-gradient(circle at 30% 26%, rgba(255,255,255,.9) 0 5%, rgba(255,255,255,.22) 13%, transparent 32%),
-            radial-gradient(circle at 50% 120%, rgba(255,160,185,.35), transparent 55%),
-            radial-gradient(circle at 50% 45%, #9a3350 0%, #6a2a48 50%, #34243f 100%) !important;
-        box-shadow:
-            inset 0 -4px 8px rgba(0,0,0,.35),
-            inset 0 2px 4px rgba(255,255,255,.25),
-            0 3px 8px rgba(0,0,0,.4) !important;
+        background: linear-gradient(135deg, rgba(125,30,52,.55), rgba(30,28,42,.55) 70%) !important;
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 14px rgba(0,0,0,.35) !important;
 
         cursor: pointer;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
 
         transform: translateY(-100%);
-        transition: filter .15s ease, transform .15s ease;
+        transition: border-color .15s ease, transform .15s ease;
     }
 
     /* วงจุดไข่ปลารอบลูกแก้ว (ลายลูกไม้) */
@@ -67,13 +63,12 @@ function addStyles() {
         font-size: 14px;
         line-height: 1;
         color: #f5eff2;
-        text-shadow: 0 1px 2px rgba(0,0,0,.45);
         pointer-events: none;
         transition: transform .15s ease;
     }
 
     #${BUTTON_ID}:hover {
-        filter: brightness(1.12);
+        border-color: rgba(245,239,242,.7) !important;
     }
 
     #${BUTTON_ID}:active {
@@ -81,7 +76,7 @@ function addStyles() {
     }
 
     #${BUTTON_ID}.ltt-active {
-        filter: brightness(1.18);
+        background: linear-gradient(135deg, rgba(160,40,65,.7), rgba(30,28,42,.55) 70%) !important;
     }
 
     #${BUTTON_ID}.ltt-active::before {
