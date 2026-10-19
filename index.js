@@ -33,7 +33,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v8';
+const VERSION = 'v9';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -1065,6 +1065,27 @@ let hookTimer = 0;
 
 // หา event bus ของ SillyTavern: ลองจาก getContext() ก่อน ไม่เจอก็ import จาก events.js ตรง ๆ
 async function resolveEventBus() {
+    // ลำดับเดียวกับ extension ตัวอ้างอิงที่ใช้ได้: import จาก script.js แบบ relative ก่อน
+    // แล้วค่อยลอง path เต็ม, getContext(), และ events.js
+    const sources = [
+        ['script.js (relative)', () => import('../../../../script.js')],
+        ['script.js', () => import('/script.js')],
+        ['events.js', () => import('/scripts/events.js')]
+    ];
+
+    for (const [via, load] of sources) {
+        try {
+            const mod = await load();
+
+            if (mod?.eventSource?.on && mod?.event_types) {
+                stModule = mod;
+                return { bus: mod.eventSource, types: mod.event_types, via };
+            }
+        } catch {
+            // ข้าม ลองตัวถัดไป
+        }
+    }
+
     const ctx = getCtx();
 
     if (ctx?.eventSource?.on) {
@@ -1073,37 +1094,6 @@ async function resolveEventBus() {
             types: ctx.eventTypes || ctx.event_types || {},
             via: 'context'
         };
-    }
-
-    // เหมือน extension ตัวอ้างอิง: ดึง eventSource / event_types / chat จาก script.js ตรง ๆ
-    try {
-        const mod = await import('/script.js');
-
-        if (mod?.eventSource?.on) {
-            stModule = mod;
-
-            return {
-                bus: mod.eventSource,
-                types: mod.event_types || {},
-                via: 'script.js'
-            };
-        }
-    } catch {
-        // ข้าม
-    }
-
-    try {
-        const mod = await import('/scripts/events.js');
-
-        if (mod?.eventSource?.on) {
-            return {
-                bus: mod.eventSource,
-                types: mod.event_types || {},
-                via: 'events.js'
-            };
-        }
-    } catch {
-        // ข้าม
     }
 
     return null;
