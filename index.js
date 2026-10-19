@@ -3,6 +3,9 @@ const BUTTON_ID = `${EXT_ID}-button`;
 const PANEL_ID = `${EXT_ID}-panel`;
 const ORB_SIZE = 23;
 
+// ขยับลูกแก้วขึ้นจากขอบกล่องข้อความ (px) ปรับเลขนี้ได้
+const NUDGE_UP = 5;
+
 // ตัวเลือกกลมที่แผ่ออกมาเป็นส่วนโค้ง
 const ITEM_SIZE = 30;
 const ARC_RADIUS = 56;
@@ -301,6 +304,11 @@ function addStyles() {
     document.head.appendChild(style);
 }
 
+// ไอคอนสามขีด (ปุ่มเมนูทางซ้ายของกล่องข้อความ)
+function findMenuButton() {
+    return document.querySelector('#options_button');
+}
+
 function findSendForm() {
     return document.querySelector('#send_form');
 }
@@ -323,7 +331,7 @@ function findTextbox() {
 }
 
 /*
- * วางลูกแก้วเหนือกล่องข้อความทางซ้าย
+ * วางลูกแก้วเหนือไอคอนสามขีดทางซ้ายของกล่องข้อความ
  * คำนวณใหม่จากตำแหน่งจริงเพื่อรองรับมือถือ
  */
 function positionButton() {
@@ -339,8 +347,14 @@ function positionButton() {
     const margin = 8;
     const buttonHeight = button.offsetHeight || ORB_SIZE;
 
-    let left = rect.left;
-    let top = rect.top - 4;
+    // จัดให้อยู่กึ่งกลางเหนือไอคอนสามขีด ถ้าไม่เจอให้ใช้ขอบซ้ายของกล่องข้อความ
+    const menu = findMenuButton();
+    const menuRect = menu ? menu.getBoundingClientRect() : null;
+
+    let left = menuRect && menuRect.width
+        ? menuRect.left + menuRect.width / 2 - ORB_SIZE / 2
+        : rect.left;
+    let top = rect.top - 4 - NUDGE_UP;
 
     // ถ้าพื้นที่เหนือกล่องข้อความไม่พอ
     // ให้วางลูกแก้วไว้ภายในขอบบนของกล่องแทน
