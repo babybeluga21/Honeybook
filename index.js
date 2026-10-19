@@ -844,6 +844,35 @@ document.addEventListener('keydown', event => {
     }
 });
 
+// ตัวรับคลิกสำรอง: ดักตั้งแต่ขั้น capture กันกรณีปุ่มวงกลมไม่รับคลิก
+window.addEventListener('click', event => {
+    const item = event.target?.closest?.(`#${PANEL_ID} .ltt-item`);
+    if (!item) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const category = CATEGORIES.find(c => c.id === item.dataset.id);
+
+    try {
+        closePanel();
+        if (typeof category?.onClick === 'function') category.onClick();
+    } catch (error) {
+        console.error(`[${EXT_ID}] error`, error);
+        showToast(`${category?.label}: ${error?.message || error}`);
+    }
+}, true);
+
+// DEBUG ชั่วคราว: ตอนวงตัวเลือกเปิดอยู่ ให้บอกว่านิ้วแตะโดนอะไร (เอาออกได้ภายหลัง)
+window.addEventListener('pointerdown', event => {
+    if (!panelOpen) return;
+
+    const t = event.target;
+    const cls = typeof t?.className === 'string' ? t.className.split(' ')[0] : '';
+
+    showToast(`DEBUG แตะโดน: ${t?.tagName}${t?.id ? '#' + t.id : ''}${cls ? '.' + cls : ''}`);
+}, true);
+
 
 /* ============================================================
  * ตรวจจับ Lorebook ที่ถูกทริกเกอร์
