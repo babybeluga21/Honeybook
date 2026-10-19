@@ -26,6 +26,9 @@ const DEBUG_TOASTS = true;
 // ดูข้อความล่าสุดกี่ข้อความเพื่อหาคีย์ที่ตรง (ใช้ประมาณคีย์ที่ทำให้ทริกเกอร์)
 const SCAN_MESSAGES = 8;
 
+// แสดงสูงสุดกี่รายการต่อหน้า (มากกว่านี้จะแบ่งไปหน้าถัดไป) ปรับเลขนี้ได้
+const PER_PAGE = 10;
+
 let initialized = false;
 let panelOpen = false;
 let positionObserver = null;
@@ -36,6 +39,8 @@ let moveMode = false;
 const POS_KEY = `${EXT_ID}-sheet-pos`;
 let customPos = loadPos();
 let viewIndex = -1;
+let viewPage = 0;
+let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
@@ -602,6 +607,7 @@ function addStyles() {
 
     /* แถบหัว: ปุ่มเลื่อนรวมเป็นแคปซูลเดียว */
     #${SHEET_ID} .ltt-head {
+        flex: none;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -671,6 +677,8 @@ function addStyles() {
 
     #${SHEET_ID} .ltt-nav-label {
         min-width: 26px;
+        padding: 0 3px;
+        white-space: nowrap;
         text-align: center;
         font-family: 'Courier New', monospace;
         font-size: 10px;
@@ -681,6 +689,7 @@ function addStyles() {
 
     /* จำนวนรายการ (ซ้ายของแถบหัว) */
     #${SHEET_ID} .ltt-meta {
+        flex: 1 1 auto;
         display: flex;
         align-items: center;
         gap: 5px;
@@ -688,7 +697,7 @@ function addStyles() {
         padding: 2px 0 2px 2px;
         color: #f6e8e2;
         font-size: 10px;
-        line-height: 1.7;
+        line-height: 2;
         letter-spacing: .3px;
         white-space: nowrap;
         overflow: hidden;
@@ -706,17 +715,17 @@ function addStyles() {
         display: none;
     }
 
-    /* ข้อความที่ใช้ค้นหา (บรรทัดเล็กใต้เส้น) */
+    /* ข้อความที่ใช้ค้นหา: ห้ามซ่อนส่วนเกินแนวตั้ง ไม่งั้นสระ/วรรณยุกต์ไทยที่สูงจะโดนตัด */
     #${SHEET_ID} .ltt-query {
-        margin: 4px 10px 0;
-        padding: 2px 0;
+        flex: none;
+        margin: 5px 10px 0;
+        padding: 3px 0;
         color: #bfaeb6;
-        font-size: 9px;
-        line-height: 1.8;
-        font-style: italic;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 9.5px;
+        line-height: 2;
+        white-space: normal;
+        overflow: visible;
+        word-break: break-word;
     }
 
     #${SHEET_ID} .ltt-query:empty {
@@ -761,9 +770,6 @@ function addStyles() {
 
     #${SHEET_ID} .ltt-nav .ltt-reset[hidden] { display: none; }
 
-    #${SHEET_ID}.ltt-nonav .ltt-prev,
-    #${SHEET_ID}.ltt-nonav .ltt-next,
-    #${SHEET_ID}.ltt-nonav .ltt-nav-label { display: none; }
 
     /* โหมดย้าย: กรอบประเรืองแสง ลากได้ทั้งหน้าต่าง */
     #${SHEET_ID}.ltt-moving {
@@ -1694,6 +1700,7 @@ async function startTracking() {
         capturing = false;
         pendingTriggers = null;
         viewIndex = index;
+        viewPage = 0;
         trackerState.received += 1;
         trackerState.note = '';
         // ถ้าติดแล้วจะมี toast "📖 ทริกเกอร์ N รายการ" ขึ้นไปแล้ว บอกซ้ำเฉพาะตอนไม่มีอะไรติด
@@ -1709,6 +1716,8 @@ async function startTracking() {
         pendingTriggers = null;
         liveEntries = null;
         viewIndex = -1;
+        viewPage = 0;
+        livePage = 0;
 
         updateBadge();
         if (sheetOpen) renderSheet();
@@ -1837,6 +1846,49 @@ function bindDrag(sheet) {
     sheet.addEventListener('pointercancel', end);
 }
 
+
+function itemsOf(ctx, index) {
+    const items = ctx?.chat?.[index]?.extra?.ltt_triggers?.items;
+    return Array.isArray(items) ? items.filter(item => item && typeof item === 'object') : [];
+}
+
+function pageCount(total) {
+    return Math.max(1, Math.ceil(total / PER_PAGE));
+}
+
+// ลำดับหน้าทั้งหมด: แต่ละข้อความ (เรียงเก่า→ใหม่) แตกเป็นหลายหน้าถ้ามีเกิน PER_PAGE
+function pageSequence(ctx) {
+    const seq = [];
+
+    for (const index of trackedIndices()) {
+        const pages = pageCount(itemsOf(ctx, index).length);
+        for (let page = 0; page < pages; page++) seq.push({ index, page });
+    }
+
+    return seq;
+}
+
+function stepPage(delta) {
+    const ctx = getCtx();
+    const seq = ctx ? pageSequence(ctx) : [];
+
+    if (!seq.length) {
+        const max = pageCount(liveEntries?.length || 0) - 1;
+        livePage = Math.max(0, Math.min(livePage + delta, max));
+        renderSheet();
+        return;
+    }
+
+    const current = seq.findIndex(entry => entry.index === viewIndex && entry.page === viewPage);
+    const target = seq[(current < 0 ? seq.length - 1 : current) + delta];
+
+    if (!target) return;
+
+    viewIndex = target.index;
+    viewPage = target.page;
+    renderSheet();
+}
+
 function createSheet() {
     let sheet = document.getElementById(SHEET_ID);
     if (sheet) return sheet;
@@ -1871,15 +1923,7 @@ function createSheet() {
         <div class="ltt-list"></div>
     `;
 
-    const step = delta => {
-        const indices = trackedIndices();
-        const position = indices.indexOf(viewIndex) + delta;
-
-        if (position < 0 || position >= indices.length) return;
-
-        viewIndex = indices[position];
-        renderSheet();
-    };
+    const step = delta => stepPage(delta);
 
     sheet.querySelector('.ltt-prev').addEventListener('click', event => {
         event.stopPropagation();
@@ -1943,7 +1987,7 @@ function renderCard(item, index = 0) {
     const hasKeys = keys.length > 0 || secondary.length > 0;
 
     const card = makeEl('div', 'ltt-card');
-    card.style.setProperty('--i', String(Math.min(index, 8)));
+    card.style.setProperty('--i', String(Math.min(index % PER_PAGE, 8)));
 
     if (item.c) card.classList.add('ltt-const');
     else if (!hasKeys && !item.v) card.classList.add('ltt-weak');
@@ -1985,27 +2029,40 @@ function renderSheet() {
     const next = sheet.querySelector('.ltt-next');
 
     list.textContent = '';
+    list.scrollTop = 0;
     query.textContent = '';
-    sheet.classList.toggle('ltt-nonav', !ctx || !trackedIndices().length);
 
     const indices = trackedIndices();
 
-    if (!ctx || !indices.length) {
-        label.textContent = '—';
-        meta.textContent = '0 รายการ';
-        prev.disabled = true;
-        next.disabled = true;
+    // สรุปจำนวน: "11–20 / 23" เมื่อมีหลายหน้า ไม่งั้น "N รายการ"
+    const summary = (total, page) => {
+        if (total <= PER_PAGE) return `${total} รายการ`;
 
-        if (liveEntries?.length) {
-            meta.textContent = `${liveEntries.length} รายการ`;
+        const from = page * PER_PAGE + 1;
+        const to = Math.min(total, from + PER_PAGE - 1);
+
+        return `${from}–${to} / ${total}`;
+    };
+
+    if (!ctx || !indices.length) {
+        const total = liveEntries?.length || 0;
+        const pages = pageCount(total);
+
+        livePage = Math.max(0, Math.min(livePage, pages - 1));
+
+        label.textContent = pages > 1 ? `${livePage + 1}/${pages}` : '1';
+        prev.disabled = livePage <= 0;
+        next.disabled = livePage >= pages - 1;
+        meta.textContent = summary(total, livePage);
+
+        if (total) {
             query.textContent = 'ผลล่าสุดจาก SillyTavern';
-            liveEntries.forEach((item, i) => list.appendChild(renderCard(item, i)));
+
+            liveEntries
+                .slice(livePage * PER_PAGE, (livePage + 1) * PER_PAGE)
+                .forEach((item, i) => list.appendChild(renderCard(item, livePage * PER_PAGE + i)));
         } else {
-            list.appendChild(makeEl(
-                'div',
-                'ltt-note',
-                'ไม่มีการทริกเกอร์'
-            ));
+            list.appendChild(makeEl('div', 'ltt-note', 'ไม่มีการทริกเกอร์'));
         }
 
         appendStatus(list);
@@ -2015,32 +2072,35 @@ function renderSheet() {
 
     if (!indices.includes(viewIndex)) {
         viewIndex = indices[indices.length - 1];
+        viewPage = 0;
     }
 
-    const position = indices.indexOf(viewIndex);
     const data = ctx.chat[viewIndex].extra.ltt_triggers;
-    const items = data.items.filter(item => item && typeof item === 'object');
+    const items = itemsOf(ctx, viewIndex);
+    const pages = pageCount(items.length);
 
-    label.textContent = `#${viewIndex}`;
+    viewPage = Math.max(0, Math.min(viewPage, pages - 1));
+
+    const seq = pageSequence(ctx);
+    const position = seq.findIndex(entry => entry.index === viewIndex && entry.page === viewPage);
+
+    label.textContent = pages > 1 ? `#${viewIndex} · ${viewPage + 1}/${pages}` : `#${viewIndex}`;
     prev.disabled = position <= 0;
-    next.disabled = position >= indices.length - 1;
+    next.disabled = position >= seq.length - 1;
 
-    meta.textContent = `${items.length} รายการ`;
+    meta.textContent = summary(items.length, viewPage);
     query.textContent = data.q ? `จาก “${data.q}”` : '';
 
     if (!items.length) {
-        list.appendChild(makeEl(
-            'div',
-            'ltt-note',
-            'ข้อความนี้ไม่มี Lorebook ถูกทริกเกอร์'
-        ));
-
+        list.appendChild(makeEl('div', 'ltt-note', 'ข้อความนี้ไม่มี Lorebook ถูกทริกเกอร์'));
         appendStatus(list);
 
         return;
     }
 
-    items.forEach((item, i) => list.appendChild(renderCard(item, i)));
+    items
+        .slice(viewPage * PER_PAGE, (viewPage + 1) * PER_PAGE)
+        .forEach((item, i) => list.appendChild(renderCard(item, viewPage * PER_PAGE + i)));
 }
 
 // วางด้วย top แล้ววัดตำแหน่งจริงบนจอ ถ้าเพี้ยน (เช่นมี ancestor ที่ทำให้ fixed
@@ -2126,6 +2186,8 @@ function openSheet() {
 
     sheetOpen = true;
     viewIndex = latestTracked();
+    viewPage = 0;
+    livePage = 0;
 
     sheet.classList.add('ltt-visible');
     button?.classList.add('ltt-active');
