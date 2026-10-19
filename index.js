@@ -33,8 +33,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v6';
-const DEBUG = true; // ตั้งเป็น false เพื่อปิดกล่องบอกสถานะบนจอ
+const VERSION = 'v7';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -52,7 +51,7 @@ function dispose() {
         try { cleanups.pop()(); } catch { /* ข้าม */ }
     }
 
-    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`, `${EXT_ID}-debug`]) {
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`]) {
         document.getElementById(id)?.remove();
     }
 
@@ -539,6 +538,13 @@ function addStyles() {
         border-style: dashed;
     }
 
+    #${SHEET_ID} .ltt-status {
+        margin-top: 8px;
+        color: #8f7f88;
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
     #${SHEET_ID} .ltt-tag {
         margin-top: 4px;
         color: #bfaeb6;
@@ -837,8 +843,6 @@ function activateItem(item) {
 
     const category = CATEGORIES.find(c => c.id === item.dataset.id);
 
-    dbg(`activate ${item.dataset.id}`);
-
     try {
         closePanel();
 
@@ -872,24 +876,8 @@ function itemAtPoint(event) {
     return null;
 }
 
-// แค่จดบันทึกว่านิ้วแตะโดนอะไรบ้าง ไม่ยุ่งกับการทำงาน
-function logTap(event, item) {
-    if (!DEBUG || !(panelOpen || sheetOpen)) return;
-
-    const stack = document
-        .elementsFromPoint(event.clientX, event.clientY)
-        .filter(el => el.id !== `${EXT_ID}-debug`)
-        .slice(0, 3)
-        .map(describe)
-        .join(' > ');
-
-    dbg(`${event.type} (${Math.round(event.clientX)},${Math.round(event.clientY)}) ${item ? 'ITEM' : 'miss'} | ${stack}`);
-}
-
 function onItemTap(event) {
     const item = event.target?.closest?.(`#${PANEL_ID} .ltt-item`) || itemAtPoint(event);
-
-    logTap(event, item);
 
     if (!item) return;
 
@@ -904,7 +892,6 @@ function onItemTap(event) {
 }
 
 function bindGlobalListeners() {
-    listen(window, 'pointerdown', event => logTap(event, itemAtPoint(event)), true);
     listen(window, 'pointerup', onItemTap, true);
     listen(window, 'click', onItemTap, true);
 
@@ -922,10 +909,6 @@ function bindGlobalListeners() {
             sheet?.contains(event.target)
         ) {
             return;
-        }
-
-        if (sheetOpen || panelOpen) {
-            dbg(`outside click -> ปิด (target=${describe(event.target)})`);
         }
 
         if (sheetOpen) closeSheet();
@@ -1012,7 +995,7 @@ function summarizeEntries(entries, chat) {
         .map(message => String(message.mes ?? ''))
         .join('\n');
 
-    return entries.map(entry => {
+    return entries.filter(entry => entry && typeof entry === 'object').map(entry => {
         const keys = toArray(entry.key);
         const secondary = toArray(entry.keysecondary);
 
@@ -1058,18 +1041,89 @@ function updateBadge() {
     if (badge) badge.textContent = String(count);
 }
 
-function startTracking() {
+// สถานะของตัวติดตาม (แสดงในหน้าต่างตอนไม่มีข้อมูล เพื่อดูว่าขาดตรงไหน)
+const trackerState = {
+    hooked: false,
+    via: '',
+    generations: 0,
+    lastType: '',
+    wiEvents: 0,
+    lastWiCount: 0,
+    received: 0
+};
+
+let hookAttempts = 0;
+let hookTimer = 0;
+
+// หา event bus ของ SillyTavern: ลองจาก getContext() ก่อน ไม่เจอก็ import จาก events.js ตรง ๆ
+async function resolveEventBus() {
     const ctx = getCtx();
 
-    if (!ctx?.eventSource) {
-        console.warn(`[${EXT_ID}] ไม่พบ SillyTavern.getContext() จึงตรวจจับ Lorebook ไม่ได้`);
+    if (ctx?.eventSource?.on) {
+        return {
+            bus: ctx.eventSource,
+            types: ctx.eventTypes || ctx.event_types || {},
+            via: 'context'
+        };
+    }
+
+    try {
+        const mod = await import('/scripts/events.js');
+
+        if (mod?.eventSource?.on) {
+            return {
+                bus: mod.eventSource,
+                types: mod.event_types || {},
+                via: 'events.js'
+            };
+        }
+    } catch {
+        // ข้าม
+    }
+
+    return null;
+}
+
+// payload ของ world_info_activated: รับได้ทั้ง array / Set / Map / object ที่คีย์ด้วย uid / entry เดี่ยว
+function toEntryList(payload) {
+    if (!payload) return [];
+    if (Array.isArray(payload)) return payload;
+    if (payload instanceof Map) return Array.from(payload.values());
+    if (typeof payload[Symbol.iterator] === 'function') return Array.from(payload);
+
+    if (typeof payload === 'object') {
+        if ('uid' in payload && ('key' in payload || 'content' in payload)) return [payload];
+        return Object.values(payload);
+    }
+
+    return [];
+}
+
+async function startTracking() {
+    if (trackerState.hooked || !initialized) return;
+
+    const found = await resolveEventBus();
+
+    if (!initialized || trackerState.hooked) return;
+
+    // ยังต่อไม่ได้ (SillyTavern อาจโหลดไม่เสร็จ): ลองใหม่ทุกวินาทีสูงสุด 20 ครั้ง
+    if (!found) {
+        hookAttempts += 1;
+
+        if (hookAttempts < 20) {
+            hookTimer = setTimeout(() => startTracking().catch(() => {}), 1000);
+        } else {
+            console.warn(`[${EXT_ID}] ไม่พบ eventSource จึงตรวจจับ Lorebook ไม่ได้`);
+            showToast('Lorebook Tracker: ต่อกับ SillyTavern ไม่ได้ จึงตรวจจับ Lorebook ไม่ได้', 9000);
+        }
+
         return;
     }
 
-    const types = ctx.eventTypes || {};
+    const { bus, types, via } = found;
+
     const on = (name, fallback, handler) => {
         const eventName = name ?? fallback;
-        const bus = ctx.eventSource;
 
         bus.on(eventName, handler);
 
@@ -1086,17 +1140,30 @@ function startTracking() {
 
         capturing = type !== 'quiet';
         pendingTriggers = null;
+
+        if (capturing) {
+            trackerState.generations += 1;
+            trackerState.lastType = String(type || 'normal');
+            trackerState.lastWiCount = 0;
+        }
     });
 
     // Lorebook ที่ถูกทริกเกอร์ในรอบนี้
-    on(types.WORLD_INFO_ACTIVATED, 'world_info_activated', entries => {
+    // SillyTavern อาจยิง event นี้หลายครั้งต่อหนึ่งคำตอบ จึงรวมกัน (ไม่ทับของเดิม)
+    on(types.WORLD_INFO_ACTIVATED, 'world_info_activated', payload => {
+        trackerState.wiEvents += 1;
+
         if (!capturing) return;
 
-        const list = Array.isArray(entries)
-            ? entries
-            : Array.from(entries || []);
+        const fresh = summarizeEntries(toEntryList(payload), getCtx()?.chat);
+        const merged = new Map();
 
-        pendingTriggers = summarizeEntries(list, getCtx()?.chat);
+        for (const item of [...(pendingTriggers || []), ...fresh]) {
+            merged.set(`${item.w}\u0000${item.id}`, item);
+        }
+
+        pendingTriggers = [...merged.values()];
+        trackerState.lastWiCount = pendingTriggers.length;
     });
 
     // คำตอบมาถึง: แนบผลทริกเกอร์ไว้กับข้อความคำตอบ
@@ -1132,6 +1199,7 @@ function startTracking() {
         capturing = false;
         pendingTriggers = null;
         viewIndex = index;
+        trackerState.received += 1;
 
         updateBadge();
         if (sheetOpen) renderSheet();
@@ -1147,45 +1215,15 @@ function startTracking() {
         if (sheetOpen) renderSheet();
     });
 
+    trackerState.hooked = true;
+    trackerState.via = via;
+
     updateBadge();
 }
 
 /* ============================================================
  * แผงแสดงรายการทริกเกอร์
  * ============================================================ */
-
-// กล่องบอกสถานะเล็ก ๆ มุมบนจอ (ไม่รับการแตะ) ใช้ดูว่าอะไรรับการแตะแทนตัวเลือก
-function dbg(text) {
-    if (!DEBUG) return;
-
-    const id = `${EXT_ID}-debug`;
-    let box = document.getElementById(id);
-
-    if (!box) {
-        box = document.createElement('div');
-        box.id = id;
-        box.style.cssText =
-            'position:fixed;left:4px;top:4px;max-width:calc(100vw - 8px);padding:4px 6px;' +
-            'background:rgba(0,0,0,.78);color:#9fe8a8;font:10px/1.35 monospace;' +
-            'white-space:pre-wrap;word-break:break-all;z-index:1000002;pointer-events:none;';
-        box.dataset.lines = '[]';
-        document.body.appendChild(box);
-    }
-
-    const lines = JSON.parse(box.dataset.lines);
-    lines.push(text);
-    while (lines.length > 9) lines.shift();
-
-    box.dataset.lines = JSON.stringify(lines);
-    box.textContent = lines.join('\n');
-}
-
-function describe(el) {
-    if (!el || !el.tagName) return String(el);
-
-    const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/)[0] : '';
-    return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (cls ? '.' + cls : '');
-}
 
 function showToast(text, ms = 5000) {
     const id = `${EXT_ID}-toast`;
@@ -1262,6 +1300,15 @@ function createSheet() {
     return sheet;
 }
 
+function appendStatus(list) {
+    const text = trackerState.hooked
+        ? `ติดตาม: ต่อแล้ว (${trackerState.via}) · สร้างคำตอบ ${trackerState.generations} ครั้ง` +
+          ` · พบ Lorebook ${trackerState.wiEvents} ครั้ง · แนบผล ${trackerState.received} ครั้ง`
+        : `ติดตาม: ยังไม่ได้ต่อกับ SillyTavern (ลอง ${hookAttempts} ครั้ง)`;
+
+    list.appendChild(makeEl('div', 'ltt-status', text));
+}
+
 function renderCard(item) {
     const card = makeEl('div', 'ltt-card');
 
@@ -1325,6 +1372,8 @@ function renderSheet() {
             'ไม่มีการทริกเกอร์'
         ));
 
+        appendStatus(list);
+
         return;
     }
 
@@ -1348,6 +1397,8 @@ function renderSheet() {
             'ltt-note',
             'ข้อความนี้ไม่มี Lorebook ถูกทริกเกอร์'
         ));
+
+        appendStatus(list);
 
         return;
     }
@@ -1413,17 +1464,6 @@ function openSheet() {
     renderSheet();
     positionSheet();
     verifySheet();
-
-    const r = sheet.getBoundingClientRect();
-    const bodyStyle = getComputedStyle(document.body);
-    const bodyRect = document.body.getBoundingClientRect();
-
-    dbg(
-        `openSheet: rect=${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} ` +
-        `inner=${window.innerHeight} client=${document.documentElement.clientHeight} ` +
-        `body=${Math.round(bodyRect.top)}/${Math.round(bodyRect.height)} ` +
-        `tf=${bodyStyle.transform} filter=${bodyStyle.filter} contain=${bodyStyle.contain}`
-    );
 }
 
 // เช็คว่าหน้าต่างขึ้นบนจอจริงไหม ถ้าไม่ขึ้นให้บอกสาเหตุบนจอเลย (มือถือไม่มี devtools)
@@ -1454,8 +1494,6 @@ function verifySheet() {
 
 function closeSheet() {
     if (!sheetOpen) return;
-
-    dbg('closeSheet <- ' + (new Error().stack.split('\n')[2] || '').trim().slice(-48));
 
     sheetOpen = false;
 
@@ -1504,7 +1542,9 @@ export async function init() {
     createButton();
     bindGlobalListeners();
     startPositionObserver();
-    startTracking();
+
+    cleanups.push(() => clearTimeout(hookTimer));
+    startTracking().catch(error => console.error(`[${EXT_ID}] tracking error`, error));
 
     schedulePosition();
 
