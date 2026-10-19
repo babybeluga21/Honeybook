@@ -33,7 +33,7 @@ let viewIndex = -1;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v11';
+const VERSION = 'v12';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -735,6 +735,7 @@ function togglePanel() {
 
     panelOpen = !panelOpen;
 
+    updateBadge();
     positionPanel();
 
     panel.classList.toggle('ltt-visible', panelOpen);
@@ -1033,12 +1034,21 @@ function latestTracked() {
     return indices.length ? indices[indices.length - 1] : -1;
 }
 
-function updateBadge() {
-    const ctx = getCtx();
-    const index = latestTracked();
-    const count = index >= 0
-        ? ctx.chat[index].extra.ltt_triggers.items.length
-        : 0;
+// เลขบนวงกลม Lorebook = จำนวนรายการที่ทริกเกอร์ติดในรอบล่าสุด
+// ส่งตัวเลขเข้ามาตรง ๆ ได้ (ตอน event มาถึงทันที) ไม่ส่งก็คำนวณจากข้อความล่าสุด
+function updateBadge(override) {
+    let count;
+
+    if (Number.isInteger(override)) {
+        count = override;
+    } else {
+        const ctx = getCtx();
+        const index = latestTracked();
+
+        count = index >= 0
+            ? ctx.chat[index].extra.ltt_triggers.items.length
+            : (liveEntries?.length || 0);
+    }
 
     const badge = document.querySelector(
         `#${PANEL_ID} .ltt-item[data-id="lorebook"] .ltt-count`
@@ -1197,6 +1207,7 @@ async function startTracking() {
 
         pendingTriggers = [...merged.values()];
         liveEntries = pendingTriggers;
+        updateBadge(pendingTriggers.length);
         trackerState.lastWiCount = pendingTriggers.length;
         debugEvent(`📖 Lorebook ทริกเกอร์ ${pendingTriggers.length} รายการ`);
     });
@@ -1257,6 +1268,7 @@ async function startTracking() {
     on(types.CHAT_CHANGED, 'chat_id_changed', () => {
         capturing = false;
         pendingTriggers = null;
+        liveEntries = null;
         viewIndex = -1;
 
         updateBadge();
@@ -1596,6 +1608,7 @@ export async function init() {
 
     addStyles();
     createPanel();
+    updateBadge();
     createButton();
     bindGlobalListeners();
     startPositionObserver();
