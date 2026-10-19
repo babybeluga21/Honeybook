@@ -685,9 +685,10 @@ function addStyles() {
         align-items: center;
         gap: 5px;
         min-width: 0;
-        padding: 0 0 0 2px;
+        padding: 2px 0 2px 2px;
         color: #f6e8e2;
         font-size: 10px;
+        line-height: 1.7;
         letter-spacing: .3px;
         white-space: nowrap;
         overflow: hidden;
@@ -707,9 +708,11 @@ function addStyles() {
 
     /* ข้อความที่ใช้ค้นหา (บรรทัดเล็กใต้เส้น) */
     #${SHEET_ID} .ltt-query {
-        margin: 5px 10px 0;
+        margin: 4px 10px 0;
+        padding: 2px 0;
         color: #bfaeb6;
         font-size: 9px;
+        line-height: 1.8;
         font-style: italic;
         white-space: nowrap;
         overflow: hidden;
@@ -727,7 +730,9 @@ function addStyles() {
         min-height: 0;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        padding: 6px 8px 10px;
+        padding: 6px 8px 16px;
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
         scrollbar-width: thin;
         scrollbar-color: rgba(224,120,138,.6) transparent;
     }
@@ -755,6 +760,10 @@ function addStyles() {
     #${SHEET_ID} .ltt-nav .ltt-move.ltt-on .ltt-tick { display: block; }
 
     #${SHEET_ID} .ltt-nav .ltt-reset[hidden] { display: none; }
+
+    #${SHEET_ID}.ltt-nonav .ltt-prev,
+    #${SHEET_ID}.ltt-nonav .ltt-next,
+    #${SHEET_ID}.ltt-nonav .ltt-nav-label { display: none; }
 
     /* โหมดย้าย: กรอบประเรืองแสง ลากได้ทั้งหน้าต่าง */
     #${SHEET_ID}.ltt-moving {
@@ -867,7 +876,7 @@ function addStyles() {
         font-family: Georgia, serif;
         font-size: 8.5px;
         letter-spacing: .7px;
-        line-height: 13px;
+        line-height: 1.9;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1977,6 +1986,7 @@ function renderSheet() {
 
     list.textContent = '';
     query.textContent = '';
+    sheet.classList.toggle('ltt-nonav', !ctx || !trackedIndices().length);
 
     const indices = trackedIndices();
 
