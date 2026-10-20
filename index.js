@@ -78,7 +78,7 @@ let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v20';
+const VERSION = 'v21';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -1150,43 +1150,54 @@ function addStyles() {
         max-width: min(300px, calc(100vw - 16px));
     }
 
-    #${WRITE_ID} .ltt-spk-b,
-    #${WRITE_ID} .ltt-spk-c { display: none; }
+    /* ประกายและข้าวหลามตัดมุมขวาบนเอาออก เพื่อเว้นที่ให้ปุ่มปิดกับป้ายคำอธิบาย */
+    #${WRITE_ID} .ltt-spk,
+    #${WRITE_ID} .ltt-c-tr { display: none; }
 
-    /* หัว: ไม่กินพื้นที่แนวตั้งแล้ว ลอยอยู่ขวาบนบรรทัดเดียวกับป้าย WRITE */
-    #${WRITE_ID} .ltt-head {
-        position: absolute;
-        top: 2px;
-        right: 7px;
-        z-index: 3;
-        margin: 0;
-        padding: 0;
-        gap: 5px;
-        background: none;
-    }
+    /* หัวไม่กินพื้นที่แนวตั้ง: คำอธิบายกับปุ่มปิดลอยอยู่บนขอบกล่องขวาบน */
+    #${WRITE_ID} .ltt-head { display: contents; }
 
+    /* ป้ายคำอธิบายจิ๋ว วางบนขอบบน ก่อนถึงปุ่มปิด */
     #${WRITE_ID} .ltt-meta {
-        padding: 0;
+        position: absolute;
+        top: -6px;
+        right: 16px;
+        z-index: 3;
+        flex: none;
+        padding: 0 5px;
         overflow: visible;
-        color: rgba(246,232,226,.62);
+        background: rgba(28,24,36,.94);
+        border: 1px solid rgba(224,120,138,.45);
+        border-radius: 2px;
+        color: rgba(246,232,226,.78);
         font-size: 7px;
-        line-height: 1.7;
+        line-height: 11px;
         letter-spacing: 0;
     }
 
     #${WRITE_ID} .ltt-meta::before { display: none; }
 
+    /* ปุ่มปิดแยกเป็นปุ่มกลมที่มุมขวาบน (สไตล์เดียวกับป้าย WRITE) */
     #${WRITE_ID} .ltt-nav {
+        position: absolute;
+        top: -8px;
+        right: -7px;
+        z-index: 4;
         padding: 0;
         border: 0;
         background: none;
     }
 
     #${WRITE_ID} .ltt-nav .ltt-close {
-        width: 12px;
-        height: 12px;
+        width: 16px;
+        height: 16px;
         margin: 0;
+        border: 1px solid #b3243f !important;
+        background: linear-gradient(180deg, #fbefe9, #f0dcd4) !important;
+        box-shadow: 0 0 0 2px #1c1824, 0 2px 6px rgba(0,0,0,.35) !important;
+        color: #8f1f38;
         font-size: 8px;
+        font-weight: 700;
     }
 
     #${WRITE_ID} .ltt-nav .ltt-close::before { display: none; }
