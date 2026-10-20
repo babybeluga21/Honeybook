@@ -4,8 +4,12 @@ const PANEL_ID = `${EXT_ID}-panel`;
 const SHEET_ID = `${EXT_ID}-sheet`;
 const SEARCH_ID = `${EXT_ID}-search`;
 const WRITE_ID = `${EXT_ID}-write`;
-// ตัวเลือก CSS ที่ใช้ร่วมกันของหน้าต่างทั้งสามแบบ (Triggers / Search / Write)
-const WINS = `:is(#${SHEET_ID}, #${SEARCH_ID}, #${WRITE_ID})`;
+const DICE_ID = `${EXT_ID}-dice`;
+const CAL_ID = `${EXT_ID}-cal`;
+// ตัวเลือก CSS ที่ใช้ร่วมกันของหน้าต่างทั้งหมด (Triggers / Search / Write / Dice / Calendar)
+const WINS = `:is(#${SHEET_ID}, #${SEARCH_ID}, #${WRITE_ID}, #${DICE_ID}, #${CAL_ID})`;
+// หน้าต่างที่ใช้ปุ่มเครื่องมือแบบ Write (Dice / Calendar)
+const TOOLWINS = `:is(#${DICE_ID}, #${CAL_ID})`;
 const ORB_SIZE = 23;
 
 // ขยับลูกแก้วขึ้นจากขอบกล่องข้อความ (px) ปรับเลขนี้ได้
@@ -22,6 +26,9 @@ const SPARK = '<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColo
 
 const SEARCH_ICON = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="5" r="3.4"/><path d="M7.6 7.6L10.6 10.6"/></svg>';
 const WRITE_ICON = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1.5 8V6.4C1.5 4.4 2.6 3.2 4.4 2.9V4C3.6 4.3 3.2 4.9 3.2 5.6H4.6V8H1.5ZM6.9 8V6.4C6.9 4.4 8 3.2 9.8 2.9V4C9 4.3 8.6 4.9 8.6 5.6H10V8H6.9Z"/></svg>';
+
+const DICE_ICON = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="1.6" y="1.6" width="8.8" height="8.8" rx="2"/><circle cx="4.2" cy="4.2" r=".75" fill="currentColor" stroke="none"/><circle cx="6" cy="6" r=".75" fill="currentColor" stroke="none"/><circle cx="7.8" cy="7.8" r=".75" fill="currentColor" stroke="none"/></svg>';
+const CAL_ICON = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="1.6" y="2.4" width="8.8" height="8" rx="1.6"/><path d="M1.6 5.2H10.4M4 1.2V3.4M8 1.2V3.4"/></svg>';
 
 // ปุ่มในหน้าต่าง Write (เรียงซ้าย → ขวา) เพิ่ม/ลบ/แก้ได้ที่นี่
 //   open / close : ตัวเปิด / ตัวปิด (close เว้นว่างได้ ถ้าเป็นตัวเดี่ยว)
@@ -45,11 +52,15 @@ const QUICK_SYMBOLS = ['~', '—', '!', '?', '…', '♡', '♪', '☆'];
 // จำนวนผลค้นหาสูงสุดที่แสดง (เรียงจากข้อความใหม่ไปเก่า)
 const SEARCH_LIMIT = 40;
 
-// ลำดับในส่วนโค้ง: ตัวแรกอยู่สูงสุด → Search (เล็ก) / Lorebook / Write
+// ลำดับในวงล้อ: เพิ่มลูกแก้วใหม่ได้ไม่จำกัด แค่เพิ่มบรรทัดที่นี่ (เกิน 3 ลูกวงล้อจะหมุนได้เอง)
+// วงล้อเห็นทีละ 3 ลูก ตอนเปิดครั้งแรกลูกกลางโค้งคือลำดับ WHEEL_START (ดูส่วนวงล้อด้านล่าง)
+//   small: true = ลูกเล็ก / count = มีเลขแจ้งที่มุมลูก
 const CATEGORIES = [
     { id: 'search', label: 'Search', icon: SEARCH_ICON, small: true, onClick: () => toggleSearch() },
     { id: 'lorebook', label: 'Lorebook', icon: SPARK, count: 0, onClick: () => toggleSheet() },
-    { id: 'write', label: 'Write', icon: WRITE_ICON, onClick: () => toggleWrite() }
+    { id: 'write', label: 'Write', icon: WRITE_ICON, onClick: () => toggleWrite() },
+    { id: 'dice', label: 'Dice', icon: DICE_ICON, onClick: () => toggleDice() },
+    { id: 'calendar', label: 'Calendar', icon: CAL_ICON, count: 0, onClick: () => toggleCal() }
 ];
 
 // แสดงแจ้งเตือนกลางจอทุกครั้งที่มี event (▶ เริ่ม / 📖 ทริกเกอร์ / ✔ แนบผล) ปิดได้โดยเปลี่ยนเป็น false
@@ -78,7 +89,7 @@ let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v21';
+const VERSION = 'v22';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -96,7 +107,7 @@ function dispose() {
         try { cleanups.pop()(); } catch { /* ข้าม */ }
     }
 
-    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, SEARCH_ID, WRITE_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`]) {
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, SEARCH_ID, WRITE_ID, DICE_ID, CAL_ID, `${EXT_ID}-style`, `${EXT_ID}-toast`]) {
         document.getElementById(id)?.remove();
     }
 
@@ -105,6 +116,10 @@ function dispose() {
     sheetOpen = false;
     searchOpen = false;
     writeOpen = false;
+    diceOpen = false;
+    calOpen = false;
+    cancelWheelAnim();
+    wheelDrag = null;
     armed = [];
 }
 
@@ -286,6 +301,7 @@ function addStyles() {
 
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
+        touch-action: none;
 
         opacity: 0;
         pointer-events: none;
@@ -297,9 +313,9 @@ function addStyles() {
     }
 
     #${PANEL_ID}.ltt-visible .ltt-item {
-        opacity: 1;
+        opacity: var(--o, 1);
         pointer-events: auto;
-        transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(1);
+        transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(var(--s, 1));
     }
 
     #${PANEL_ID} .ltt-item:active {
@@ -1338,6 +1354,163 @@ function addStyles() {
     #${WRITE_ID} .ltt-fly[hidden] { display: none; }
     #${WRITE_ID} .ltt-fly .ltt-tool { min-width: 26px; font-size: 13px; }
 
+    /* ===== วงล้อ: ลูกที่หลุดโค้งจางหาย / แผ่นรับนิ้วปัดตามแนวโค้ง ===== */
+    #${PANEL_ID} .ltt-catch {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: translate(-50%, -50%);
+        background: transparent;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #${PANEL_ID}.ltt-visible .ltt-catch { pointer-events: auto; }
+    #${PANEL_ID}.ltt-static .ltt-catch { display: none; }
+    #${PANEL_ID}.ltt-visible .ltt-item.ltt-off { pointer-events: none; }
+    #${PANEL_ID}.ltt-rolling .ltt-item { transition: none; }
+    #${PANEL_ID} .ltt-count.ltt-hide { display: none; }
+
+    /* ===== Dice / Calendar ===== */
+    ${TOOLWINS} .ltt-dice-ctl,
+    ${TOOLWINS} .ltt-cal-top { flex: none; }
+
+    ${TOOLWINS} .ltt-bar {
+        flex: none;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin: 8px 8px 0;
+    }
+
+    ${TOOLWINS} .ltt-bar.ltt-bar-in { margin: 0; }
+
+    ${TOOLWINS} .ltt-hint {
+        color: #bfaeb6;
+        font-size: 9.5px;
+        line-height: 1.6;
+    }
+
+    ${TOOLWINS} .ltt-tool {
+        -webkit-appearance: none;
+        appearance: none;
+        flex: none;
+        min-width: 24px;
+        height: 22px;
+        margin: 0;
+        padding: 0 7px;
+        border: 1px solid rgba(246,232,226,.4) !important;
+        border-radius: 5px !important;
+        background: rgba(246,232,226,.09) !important;
+        box-shadow: none !important;
+        color: #f6e8e2;
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background .15s ease, border-color .15s ease;
+    }
+
+    ${TOOLWINS} .ltt-tool:active { background: rgba(246,232,226,.28) !important; }
+
+    ${TOOLWINS} .ltt-tool.ltt-on {
+        border-color: #f6e8e2 !important;
+        background: #c42b48 !important;
+        color: #fff;
+    }
+
+    ${TOOLWINS} .ltt-tool.ltt-confirm,
+    ${TOOLWINS} .ltt-tool.ltt-danger {
+        border-color: #e0788a !important;
+        background: #b3243f !important;
+        color: #fff;
+    }
+
+    ${TOOLWINS} .ltt-step { min-width: 22px; padding: 0 5px; font-size: 14px; }
+
+    ${TOOLWINS} .ltt-grow { flex: 1 1 80px; width: auto; min-width: 0; }
+    ${TOOLWINS} .ltt-time { flex: none; width: 84px; }
+
+    ${TOOLWINS} .ltt-bar .ltt-search-input {
+        height: 24px;
+        padding: 2px 8px;
+        font-size: 11.5px;
+        line-height: 1.4;
+        color-scheme: dark;
+    }
+
+    ${TOOLWINS} .ltt-search-input[type="date"],
+    ${TOOLWINS} .ltt-search-input[type="time"] { color-scheme: dark; }
+
+    #${DICE_ID} .ltt-area {
+        display: block;
+        min-height: 96px;
+        resize: none;
+        line-height: 1.6;
+    }
+
+    /* ปุ่มตารางสุ่ม: ชื่อ + ดินสอแก้ไข ติดกันเป็นก้อนเดียว */
+    #${DICE_ID} .ltt-grp2 { display: inline-flex; max-width: 100%; }
+
+    #${DICE_ID} .ltt-chip {
+        max-width: 118px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #${DICE_ID} .ltt-grp2 .ltt-chip {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        border-right-width: 0 !important;
+    }
+
+    #${DICE_ID} .ltt-chip-edit {
+        min-width: 22px;
+        padding: 0 4px;
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        color: #e0788a;
+    }
+
+    /* ผลทอย: ใบล่าสุดเด่น ใบเก่าไม่เล่นแอนิเมชันซ้ำ */
+    #${DICE_ID} .ltt-roll { animation: none; }
+
+    #${DICE_ID} .ltt-roll.ltt-latest {
+        animation: ltt-card-in .3s ease both;
+        border-color: rgba(246,232,226,.7);
+    }
+
+    #${DICE_ID} .ltt-roll-text {
+        color: #fff;
+        font-size: 12.5px;
+        font-weight: 600;
+        line-height: 1.55;
+        word-break: break-word;
+    }
+
+    ${TOOLWINS} .ltt-roll-act { margin-top: 5px; }
+
+    /* ปฏิทิน */
+    #${CAL_ID} .ltt-book { max-width: none; }
+    #${CAL_ID} .ltt-card-top { flex-wrap: wrap; }
+    #${CAL_ID} .ltt-card.ltt-past { opacity: .6; }
+
+    #${CAL_ID} .ltt-card.ltt-cal-edit {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        opacity: 1;
+    }
+
+    #${CAL_ID} .ltt-cal-edit .ltt-search-input { width: 100%; box-sizing: border-box; }
+    #${CAL_ID} .ltt-cal-edit .ltt-bar .ltt-grow { width: auto; }
+    #${CAL_ID} .ltt-cal-edit .ltt-bar .ltt-time { width: 84px; }
+
     /* ไฮไลต์ข้อความที่เลื่อนไปหา */
     .mes.ltt-flash { animation: ltt-mes-flash 2.4s ease-out; }
 
@@ -1465,18 +1638,14 @@ function positionPanel() {
 
     panel.classList.toggle('ltt-flip', sx < 0);
 
-    const items = panel.querySelectorAll('.ltt-item');
-    const n = items.length;
+    // วางลูกตามตำแหน่งวงล้อ (หมุนได้) และแถบรับนิ้ว
+    wheelSx = sx;
+    wheelSy = sy;
+    wheelCx = cx;
+    wheelCy = cy;
 
-    items.forEach((item, i) => {
-        const theta = (45 + ARC_STEP * (i - (n - 1) / 2)) * Math.PI / 180;
-        const x = sx * ARC_RADIUS * Math.sin(theta);
-        const y = -sy * ARC_RADIUS * Math.cos(theta);
-
-        item.style.setProperty('--x', `${x.toFixed(1)}px`);
-        item.style.setProperty('--y', `${y.toFixed(1)}px`);
-        item.style.setProperty('--d', `${i * 45}ms`);
-    });
+    layoutWheel();
+    layoutCatcher(panel);
 
     const arc = panel.querySelector('.ltt-arc');
 
@@ -1500,6 +1669,12 @@ function createPanel() {
     const arc = document.createElement('div');
     arc.className = 'ltt-arc';
     panel.appendChild(arc);
+
+    // แถบรับนิ้วสำหรับปัดวงล้อ (อยู่ใต้ลูกแก้ว) ถ้ามีลูกไม่เกิน 3 ไม่ต้องหมุนจึงปิดไว้
+    const catcher = document.createElement('div');
+    catcher.className = 'ltt-catch';
+    panel.appendChild(catcher);
+    panel.classList.toggle('ltt-static', !wheelSpins());
 
     for (const category of CATEGORIES) {
         const item = document.createElement('button');
@@ -1591,6 +1766,7 @@ function closePanel() {
     if (!panelOpen) return;
 
     panelOpen = false;
+    settleWheel();
 
     const panel = document.getElementById(PANEL_ID);
     const button = document.getElementById(BUTTON_ID);
@@ -1665,6 +1841,8 @@ function itemAtPoint(event) {
     const pad = 8;
 
     for (const item of document.querySelectorAll(`#${PANEL_ID} .ltt-item`)) {
+        if (item.classList.contains('ltt-off')) continue;
+
         const r = item.getBoundingClientRect();
 
         if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) {
@@ -1676,6 +1854,9 @@ function itemAtPoint(event) {
 }
 
 function onItemTap(event) {
+    // เพิ่งปัดวงล้อ: ปล่อยนิ้วเหนือลูกไหนก็ไม่นับเป็นการแตะเลือก
+    if (wheelMoved) return;
+
     const item = event.target?.closest?.(`#${PANEL_ID} .ltt-item`) || itemAtPoint(event);
 
     if (!item) return;
@@ -1694,6 +1875,13 @@ function bindGlobalListeners() {
     listen(window, 'pointerup', onItemTap, true);
     listen(window, 'click', onItemTap, true);
 
+    // ปัดวงล้อ
+    listen(window, 'pointerdown', onWheelPointerDown, true);
+    listen(window, 'pointermove', onWheelPointerMove, true);
+    listen(window, 'pointerup', onWheelPointerUp, true);
+    listen(window, 'pointercancel', onWheelPointerUp, true);
+    listen(window, 'wheel', onWheelScroll, { capture: true, passive: false });
+
     listen(document, 'click', function onOutsideClick(event) {
         // คลิกที่ตามหลังการเลือกตัวเลือกหยก ๆ ห้ามนับเป็นการแตะข้างนอก
         if (Date.now() - lastActivate < 450) return;
@@ -1703,13 +1891,17 @@ function bindGlobalListeners() {
         const sheet = document.getElementById(SHEET_ID);
         const search = document.getElementById(SEARCH_ID);
         const write = document.getElementById(WRITE_ID);
+        const dice = document.getElementById(DICE_ID);
+        const cal = document.getElementById(CAL_ID);
 
         if (
             panel?.contains(event.target) ||
             button?.contains(event.target) ||
             sheet?.contains(event.target) ||
             search?.contains(event.target) ||
-            write?.contains(event.target)
+            write?.contains(event.target) ||
+            dice?.contains(event.target) ||
+            cal?.contains(event.target)
         ) {
             return;
         }
@@ -2082,7 +2274,18 @@ async function startTracking() {
 
         updateBadge();
         if (sheetOpen) renderSheet();
+
+        // ปฏิทินเป็นของแชทนั้น ๆ: เปลี่ยนแชทแล้วอ่านใหม่
+        calEditing = null;
+        updateCalBadge();
+        if (calOpen) renderCal();
     });
+
+    // ปฏิทิน: จับวันที่จากข้อความที่ส่ง/ได้รับ/แก้ไข/สุ่มใหม่ (จับคำ ไม่เรียก AI)
+    on(types.MESSAGE_SENT, 'message_sent', mesId => calScanMessage(mesId));
+    on(types.MESSAGE_RECEIVED, 'message_received', mesId => calScanMessage(mesId));
+    on(types.MESSAGE_EDITED, 'message_edited', mesId => calScanMessage(mesId));
+    on(types.MESSAGE_SWIPED, 'message_swiped', mesId => calScanMessage(mesId));
 
     trackerState.hooked = true;
     trackerState.via = via;
@@ -2544,6 +2747,8 @@ function positionSheet() {
 function openSheet() {
     closeSearch();
     closeWrite();
+    closeDice();
+    closeCal();
 
     const sheet = createSheet();
     const button = document.getElementById(BUTTON_ID);
@@ -2614,7 +2819,7 @@ let searchTimer = 0;
 let branchTimer = 0;
 
 function anyWinOpen() {
-    return sheetOpen || searchOpen || writeOpen;
+    return sheetOpen || searchOpen || writeOpen || diceOpen || calOpen;
 }
 
 function syncOrb() {
@@ -2625,6 +2830,8 @@ function closeAllWins() {
     closeSheet();
     closeSearch();
     closeWrite();
+    closeDice();
+    closeCal();
 }
 
 function sleep(ms) {
@@ -2700,6 +2907,8 @@ function positionWin(win) {
 function positionWins() {
     positionWin(document.getElementById(SEARCH_ID));
     positionWin(document.getElementById(WRITE_ID));
+    positionWin(document.getElementById(DICE_ID));
+    positionWin(document.getElementById(CAL_ID));
 }
 
 /* ---------- ค้นหา ---------- */
@@ -2937,6 +3146,8 @@ function createSearchWin() {
 function openSearch() {
     closeSheet();
     closeWrite();
+    closeDice();
+    closeCal();
 
     const win = createSearchWin();
 
@@ -3275,6 +3486,8 @@ function setFly(open) {
 function openWrite() {
     closeSheet();
     closeSearch();
+    closeDice();
+    closeCal();
 
     const win = createWriteWin();
 
@@ -3303,6 +3516,1871 @@ function toggleWrite() {
     else openWrite();
 }
 
+/* ============================================================
+ * Dice / Random และ ปฏิทิน: ส่วนคำนวณล้วน (ไม่แตะหน้าจอ)
+ * ============================================================ */
+
+/* ---------- ตัวสุ่ม + ตัวอ่านสูตรลูกเต๋า (ไม่แตะ DOM) ---------- */
+
+const DICE_MAX_COUNT = 100;   // ทอยได้สูงสุดกี่ลูกต่อพจน์
+const DICE_MAX_SIDES = 1000;  // ลูกเต๋ามีได้สูงสุดกี่หน้า
+const DICE_MAX_TERMS = 12;    // สูตรมีได้สูงสุดกี่พจน์
+
+// สุ่มจำนวนเต็ม 0..max-1 แบบไม่เอนเอียง (ใช้ crypto ของเบราว์เซอร์ ไม่เรียก AI)
+function secureInt(max) {
+    if (!(max > 1)) return 0;
+
+    const cryptoObj = globalThis.crypto;
+
+    if (cryptoObj?.getRandomValues) {
+        const limit = Math.floor(0x100000000 / max) * max;
+        const buf = new Uint32Array(1);
+
+        do {
+            cryptoObj.getRandomValues(buf);
+        } while (buf[0] >= limit);
+
+        return buf[0] % max;
+    }
+
+    return Math.floor(Math.random() * max);
+}
+
+function rollDie(sides) {
+    return secureInt(sides) + 1;
+}
+
+/*
+ * อ่านสูตร เช่น d20, 2d6+3, 1d20+1d4-2, 4d6kh3 (ทอย 4 เก็บ 3 สูงสุด), 2d20kl1 (เก็บต่ำสุด)
+ * คืน { terms } หรือ { error }
+ */
+function parseDiceFormula(input) {
+    const raw = String(input ?? '')
+        .toLowerCase()
+        .replace(/[−–—]/g, '-')
+        .replace(/＋/g, '+')
+        .trim();
+
+    if (!raw) return { error: 'ใส่สูตรก่อน เช่น 2d6+3' };
+
+    // เว้นวรรคระหว่างตัวเลข (เช่น "2d6 3") ถ้ารวมเงียบ ๆ จะกลายเป็น 2d63 จึงแจ้งให้ใส่ + หรือ - แทน
+    if (/\d\s+\d/.test(raw)) return { error: 'ระหว่างพจน์ต้องมี + หรือ - (เช่น 2d6+3)' };
+
+    const s = raw.replace(/[\s_]/g, '');
+
+    const termRe = /^([+-]?)(?:(\d*)d(\d+|%)(?:k([hl])(\d+))?|(\d{1,6}))/;
+    const terms = [];
+    let rest = s;
+    let totalDice = 0;
+
+    while (rest) {
+        const m = rest.match(termRe);
+
+        if (!m) return { error: `อ่านสูตรไม่ออกตรง “${rest.slice(0, 8)}”` };
+        if (terms.length && !m[1]) return { error: `ระหว่างพจน์ต้องมี + หรือ - (ตรง “${rest.slice(0, 8)}”)` };
+        if (terms.length >= DICE_MAX_TERMS) return { error: `สูตรยาวเกินไป (สูงสุด ${DICE_MAX_TERMS} พจน์)` };
+
+        const sign = m[1] === '-' ? -1 : 1;
+
+        if (m[6] !== undefined) {
+            terms.push({ kind: 'num', sign, value: Number(m[6]) });
+        } else {
+            const count = m[2] === '' ? 1 : Number(m[2]);
+            const sides = m[3] === '%' ? 100 : Number(m[3]);
+            const keep = m[4] ? { mode: m[4], k: Number(m[5]) } : null;
+
+            if (count < 1 || count > DICE_MAX_COUNT) return { error: `ทอยได้ 1–${DICE_MAX_COUNT} ลูกต่อพจน์` };
+            if (sides < 2 || sides > DICE_MAX_SIDES) return { error: `ลูกเต๋ามีได้ 2–${DICE_MAX_SIDES} หน้า` };
+            if (keep && (keep.k < 1 || keep.k > count)) return { error: `kh/kl ต้องเก็บ 1–${count} ลูก` };
+
+            totalDice += count;
+            if (totalDice > 200) return { error: 'ทอยรวมกันมากเกินไป' };
+
+            terms.push({ kind: 'dice', sign, count, sides, keep });
+        }
+
+        rest = rest.slice(m[0].length);
+    }
+
+    if (!terms.some(term => term.kind === 'dice')) return { error: 'ต้องมีลูกเต๋าอย่างน้อยหนึ่งลูก เช่น d20' };
+
+    const label = s.replace(/^\+/, '');
+
+    return { terms, label };
+}
+
+function rollFormula(input) {
+    const parsed = parseDiceFormula(input);
+
+    if (parsed.error) return parsed;
+
+    let total = 0;
+    const parts = [];
+
+    for (const term of parsed.terms) {
+        if (term.kind === 'num') {
+            total += term.sign * term.value;
+            parts.push({ sign: term.sign, num: term.value });
+            continue;
+        }
+
+        const rolls = Array.from({ length: term.count }, () => rollDie(term.sides));
+        let kept = rolls.map(() => true);
+
+        if (term.keep) {
+            const order = rolls.map((_, i) => i).sort((a, b) => {
+                const diff = term.keep.mode === 'h' ? rolls[b] - rolls[a] : rolls[a] - rolls[b];
+                return diff || a - b;
+            });
+
+            kept = rolls.map(() => false);
+            order.slice(0, term.keep.k).forEach(i => { kept[i] = true; });
+        }
+
+        const sum = rolls.reduce((acc, value, i) => acc + (kept[i] ? value : 0), 0);
+
+        total += term.sign * sum;
+        parts.push({ sign: term.sign, rolls, kept });
+    }
+
+    // ลูกเดียวไม่มีตัวบวก (เช่น d20) ไม่ต้องแสดงรายละเอียดซ้ำ
+    const single = parsed.terms.length === 1 && parsed.terms[0].kind === 'dice' && parsed.terms[0].count === 1;
+
+    const detail = single ? '' : parts.map((part, i) => {
+        const sign = part.sign < 0 ? '-' : (i > 0 ? '+' : '');
+
+        if (part.num !== undefined) return `${sign}${part.num}`;
+
+        const faces = part.rolls.map((value, j) => (part.kept[j] ? String(value) : `(${value})`));
+
+        return `${sign}[${faces.join(', ')}]`;
+    }).join(' ');
+
+    return {
+        ok: true,
+        label: parsed.label,
+        total,
+        detail,
+        text: `🎲 ${parsed.label} = ${total}${detail ? ` ${detail}` : ''}`
+    };
+}
+
+function flipCoinText() {
+    return `🪙 เหรียญ = ${secureInt(2) ? 'หัว' : 'ก้อย'}`;
+}
+
+function yesNoText() {
+    return `❓ ใช่/ไม่ใช่ = ${secureInt(2) ? 'ใช่' : 'ไม่ใช่'}`;
+}
+
+function tableRollText(table) {
+    const items = (table?.items || []).filter(item => String(item).trim());
+
+    if (!items.length) return '';
+
+    return `📜 ${table.name} = ${items[secureInt(items.length)]}`;
+}
+
+/* ---------- ปฏิทิน: จับวันที่/เวลาจากข้อความ (ไม่แตะ DOM, ไม่เรียก AI) ---------- */
+
+// คำที่ทำให้ประโยคน่าจะเป็น "นัด/กิจกรรม" เพิ่ม/ลบได้
+const CAL_KEYWORDS = [
+    'นัด', 'งาน', 'ประชุม', 'เจอกัน', 'พบกัน', 'เดท', 'สอบ', 'แข่ง', 'เทศกาล', 'วันเกิด',
+    'กำหนด', 'เดินทาง', 'ออกเดินทาง', 'เลื่อน', 'จอง', 'ภารกิจ', 'ปาร์ตี้', 'ไปเที่ยว',
+    'พิธี', 'กิจกรรม', 'ฉลอง', 'แต่งงาน'
+];
+
+// เทศกาล: m/d = วันที่ที่ใช้ (approx = วันเปลี่ยนตามปี ใช้ค่าประมาณ) เพิ่ม/ลบ/แก้ได้
+const CAL_FESTIVALS = [
+    { names: ['สงกรานต์'], m: 4, d: 13 },
+    { names: ['ลอยกระทง'], m: 11, d: 15, approx: true },
+    { names: ['วันปีใหม่', 'ขึ้นปีใหม่', 'ปีใหม่'], m: 1, d: 1 },
+    { names: ['วันวาเลนไทน์', 'วาเลนไทน์'], m: 2, d: 14 },
+    { names: ['วันฮาโลวีน', 'ฮาโลวีน', 'ฮัลโลวีน'], m: 10, d: 31 },
+    { names: ['คริสต์มาส'], m: 12, d: 25 },
+    { names: ['วันแม่'], m: 8, d: 12 },
+    { names: ['วันพ่อ'], m: 12, d: 5 }
+];
+
+const TH_MONTHS = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+const TH_MONTHS_SHORT = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const EN_MONTHS = ['', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const TH_DAYS_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const TH_WEEKDAYS = { 'อาทิตย์': 0, 'จันทร์': 1, 'อังคาร': 2, 'พุธ': 3, 'พฤหัสบดี': 4, 'พฤหัส': 4, 'ศุกร์': 5, 'เสาร์': 6 };
+
+function escRe(text) {
+    return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ชื่อเดือนทั้งหมด (ไทยเต็ม/ย่อ + อังกฤษเต็ม/ย่อ) → เลขเดือน
+const MONTH_LOOKUP = new Map();
+
+for (let m = 1; m <= 12; m++) {
+    MONTH_LOOKUP.set(TH_MONTHS[m], m);
+    MONTH_LOOKUP.set(TH_MONTHS_SHORT[m].replace(/\.$/, ''), m);
+    MONTH_LOOKUP.set(EN_MONTHS[m], m);
+    MONTH_LOOKUP.set(EN_MONTHS[m].slice(0, 3), m);
+}
+
+MONTH_LOOKUP.set('sept', 9);
+
+const MONTH_SRC = [...MONTH_LOOKUP.keys()].sort((a, b) => b.length - a.length).map(escRe).join('|');
+
+function monthOf(name) {
+    return MONTH_LOOKUP.get(String(name).toLowerCase().replace(/\.$/, '')) || 0;
+}
+
+const NUM_WORDS = { 'หนึ่ง': 1, 'เอ็ด': 1, 'สอง': 2, 'สาม': 3, 'สี่': 4, 'ห้า': 5, 'หก': 6, 'เจ็ด': 7, 'แปด': 8, 'เก้า': 9, 'สิบ': 10, 'สิบเอ็ด': 11, 'สิบสอง': 12 };
+const NUM_SRC = '\\d{1,2}|สิบเอ็ด|สิบสอง|หนึ่ง|เอ็ด|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|สิบ';
+
+function numOf(text) {
+    return /^\d+$/.test(text) ? Number(text) : (NUM_WORDS[text] || 0);
+}
+
+function normalizeDigits(text) {
+    return String(text ?? '').replace(/[๐-๙]/g, ch => String(ch.charCodeAt(0) - 0x0E50));
+}
+
+const p2 = n => String(n).padStart(2, '0');
+
+/* ---------- เลขวัน (ใช้ UTC ล้วน ไม่โดนเขตเวลา/ฤดูร้อนรบกวน) ---------- */
+
+function utcOf(y, m, d) {
+    const t = new Date(0);
+    t.setUTCFullYear(y, m - 1, d);
+    t.setUTCHours(0, 0, 0, 0);
+    return t;
+}
+
+function isoOf(y, m, d) {
+    return `${String(y).padStart(4, '0')}-${p2(m)}-${p2(d)}`;
+}
+
+function parseISO(text) {
+    const m = String(text || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+
+    return validYmd(y, mo, d) ? { y, m: mo, d } : null;
+}
+
+function daysInMonth(y, m) {
+    return utcOf(y, m + 1, 0).getUTCDate();
+}
+
+function validYmd(y, m, d) {
+    return y >= 1 && y <= 9999 && m >= 1 && m <= 12 && d >= 1 && d <= daysInMonth(y, m);
+}
+
+function addDays(iso, n) {
+    const p = parseISO(iso);
+    if (!p) return '';
+
+    const t = utcOf(p.y, p.m, p.d + n);
+    const y = t.getUTCFullYear();
+
+    return y >= 1 && y <= 9999 ? isoOf(y, t.getUTCMonth() + 1, t.getUTCDate()) : '';
+}
+
+// บวกเดือน: ถ้าวันที่เกินของเดือนปลายทาง (เช่น 31 ม.ค. + 1 เดือน) ถอยมาวันสุดท้ายของเดือน
+function addMonths(iso, n) {
+    const p = parseISO(iso);
+    if (!p) return '';
+
+    const index = p.y * 12 + (p.m - 1) + n;
+    const y = Math.floor(index / 12);
+    const m = (index % 12 + 12) % 12 + 1;
+
+    if (y < 1 || y > 9999) return '';
+
+    return isoOf(y, m, Math.min(p.d, daysInMonth(y, m)));
+}
+
+function weekdayOf(iso) {
+    const p = parseISO(iso);
+    return p ? utcOf(p.y, p.m, p.d).getUTCDay() : 0;
+}
+
+function realTodayISO() {
+    const now = new Date();
+    return isoOf(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+// วันที่ "dom" ของเดือนที่ใกล้ที่สุด (วันนี้นับด้วย)
+function nextDayOfMonth(base, dom) {
+    const p = parseISO(base);
+    if (!p) return '';
+
+    let { y, m } = p;
+
+    for (let i = 0; i < 14; i++) {
+        if (dom <= daysInMonth(y, m) && (i > 0 || dom >= p.d)) return isoOf(y, m, dom);
+
+        m += 1;
+        if (m > 12) { m = 1; y += 1; }
+    }
+
+    return '';
+}
+
+// วันที่ month/day ของปีที่ใกล้ที่สุด (วันนี้นับด้วย)
+function nextAnnual(base, month, day) {
+    const p = parseISO(base);
+    if (!p) return '';
+
+    for (let y = p.y; y < p.y + 9; y++) {
+        if (!validYmd(y, month, day)) continue;
+
+        const iso = isoOf(y, month, day);
+        if (iso >= base) return iso;
+    }
+
+    return '';
+}
+
+/*
+ * วันในสัปดาห์:
+ *   "หน้า"      = วันนั้นที่จะมาถึง นับจากพรุ่งนี้เป็นต้นไป (ไม่นับวันนี้)
+ *   "ที่แล้ว"    = วันนั้นที่ผ่านมาล่าสุด ก่อนวันนี้
+ *   "นี้"/ไม่ระบุ = วันนั้นที่จะมาถึง นับวันนี้ด้วย
+ */
+function resolveWeekday(base, weekday, modifier) {
+    const cur = weekdayOf(base);
+
+    if (modifier === 'ที่แล้ว' || modifier === 'ที่ผ่านมา') {
+        let back = (cur - weekday + 7) % 7;
+        if (back === 0) back = 7;
+        return addDays(base, -back);
+    }
+
+    let ahead = (weekday - cur + 7) % 7;
+    if (modifier === 'หน้า' && ahead === 0) ahead = 7;
+
+    return addDays(base, ahead);
+}
+
+/* ---------- แสดงผล ---------- */
+
+function fmtDate(iso, withWeekday = true) {
+    const p = parseISO(iso);
+    if (!p) return iso || '';
+
+    const text = `${p.d} ${TH_MONTHS_SHORT[p.m]} ${p.y}`;
+
+    return withWeekday ? `${TH_DAYS_SHORT[weekdayOf(iso)]} ${text}` : text;
+}
+
+/* ---------- ตัวจับเวลา ---------- */
+
+const RE_T_COLON = /(\d{1,2}):(\d{2})(?!\d)/g;
+const RE_T_DOT = /(\d{1,2})\.(\d{2})\s*(?:น\.|น(?![ก-๙])|นาฬิกา)/g;
+const RE_T_AFTERNOON = new RegExp(`บ่าย\\s*(?:(${NUM_SRC})\\s*(?:โมง)?|โมง)`, 'g');
+const RE_T_DAWN = new RegExp(`ตี\\s*(${NUM_SRC})`, 'g');
+const RE_T_MONG = new RegExp(`(${NUM_SRC})\\s*โมง\\s*(เช้า|เย็น)?`, 'g');
+const RE_T_TUM = new RegExp(`(${NUM_SRC})\\s*ทุ่ม`, 'g');
+const RE_T_TUM_BARE = /ทุ่ม(?:ตรง|นึง|หนึ่ง|ครึ่ง)?(?![ก-๙])/g;
+const RE_T_NOON = /เที่ยงคืน|เที่ยงวัน|เที่ยง/g;
+
+function hourFromMong(n, part) {
+    if (part === 'เย็น') return n >= 4 && n <= 7 ? n + 12 : -1;
+    if (part === 'เช้า') return n >= 6 && n <= 11 ? n : -1;
+    if (n >= 6 && n <= 12) return n;
+    if (n >= 1 && n <= 5) return n + 12;
+    return -1;
+}
+
+function findTimes(text) {
+    const out = [];
+    const used = [];
+
+    const free = (a, b) => !used.some(([s, e]) => a < e && b > s);
+
+    const put = (a, b, h, mi) => {
+        if (h < 0 || h > 23 || mi < 0 || mi > 59 || !free(a, b)) return;
+
+        used.push([a, b]);
+        out.push({ index: a, end: b, time: `${p2(h)}:${p2(mi)}` });
+    };
+
+    // "ครึ่ง" ต่อท้าย (บ่ายสองครึ่ง = 14:30)
+    const half = b => {
+        const m = text.slice(b).match(/^\s*ครึ่ง/);
+        return m ? { add: 30, len: m[0].length } : { add: 0, len: 0 };
+    };
+
+    const scan = (re, fn) => {
+        re.lastIndex = 0;
+        let m;
+
+        while ((m = re.exec(text))) {
+            if (m[0] === '') { re.lastIndex++; continue; }
+            fn(m, m.index, m.index + m[0].length);
+        }
+    };
+
+    scan(RE_T_COLON, (m, a, b) => put(a, b, Number(m[1]), Number(m[2])));
+    scan(RE_T_DOT, (m, a, b) => put(a, b, Number(m[1]), Number(m[2])));
+
+    scan(RE_T_AFTERNOON, (m, a, b) => {
+        const n = m[1] ? numOf(m[1]) : 1;
+        if (n < 1 || n > 6) return;
+        const h = half(b);
+        put(a, b + h.len, 12 + n, h.add);
+    });
+
+    scan(RE_T_DAWN, (m, a, b) => {
+        const n = numOf(m[1]);
+        if (n < 1 || n > 5) return;
+        const h = half(b);
+        put(a, b + h.len, n, h.add);
+    });
+
+    scan(RE_T_MONG, (m, a, b) => {
+        const hour = hourFromMong(numOf(m[1]), m[2]);
+        if (hour < 0) return;
+        const h = half(b);
+        put(a, b + h.len, hour, h.add);
+    });
+
+    scan(RE_T_TUM, (m, a, b) => {
+        const n = numOf(m[1]);
+        if (n < 1 || n > 5) return;
+        const h = half(b);
+        put(a, b + h.len, 18 + n, h.add);
+    });
+
+    scan(RE_T_TUM_BARE, (m, a, b) => put(a, b, 19, m[0].includes('ครึ่ง') ? 30 : 0));
+
+    scan(RE_T_NOON, (m, a, b) => {
+        if (m[0] === 'เที่ยงคืน') put(a, b, 0, 0);
+        else {
+            const h = half(b);
+            put(a, b + h.len, 12, h.add);
+        }
+    });
+
+    return out.sort((x, y) => x.index - y.index);
+}
+
+/* ---------- ตัวจับวันที่ ---------- */
+
+const RE_ISO = /(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/g;
+const RE_DMY = new RegExp(`(?:วันที่\\s*)?(\\d{1,2})\\s*(?:เดือน\\s*)?(${MONTH_SRC})\\.?(?![a-z])`, 'gi');
+const RE_NUM_DATE = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?![\d/])/g;
+const RE_FESTIVAL = new RegExp(
+    CAL_FESTIVALS.flatMap(f => f.names).sort((a, b) => b.length - a.length).map(escRe).join('|'),
+    'g'
+);
+const RE_DAY_OF_MONTH = /วันที่\s*(\d{1,2})(?!\d)/g;
+const RE_IN_N = /อีก\s*(\d{1,3})\s*(วัน|สัปดาห์|อาทิตย์|เดือน|ปี)/g;
+const RE_AGO_N = /(\d{1,3})\s*(วัน|สัปดาห์|อาทิตย์|เดือน|ปี)\s*(?:ก่อน|ที่แล้ว|ที่ผ่านมา)/g;
+const RE_WEEKDAY = /วัน(พฤหัสบดี|พฤหัส|อาทิตย์|จันทร์|อังคาร|พุธ|ศุกร์|เสาร์)\s*(นี้|หน้า|ที่แล้ว|ที่ผ่านมา)?/g;
+const RE_WEEK_MONTH = /(สัปดาห์|อาทิตย์|เดือน)\s*(หน้า|ที่แล้ว|ที่ผ่านมา)/g;
+const RE_DAYWORD = /เมื่อวานซืน|เมื่อวานนี้|เมื่อวาน|มะรืนนี้|มะรืน|พรุ่งนี้|วันนี้|คืนนี้|เช้านี้|บ่ายนี้|เย็นนี้|ค่ำนี้/g;
+
+const DAYWORD_OFFSET = {
+    'เมื่อวานซืน': -2, 'เมื่อวานนี้': -1, 'เมื่อวาน': -1,
+    'มะรืนนี้': 2, 'มะรืน': 2, 'พรุ่งนี้': 1
+};
+
+const QUANTITY_AFTER = /^\s*(?:บาท|คน|ปี|เมตร|ชิ้น|ตัว|อัน|ครั้ง|ชั่วโมง|นาที|เหรียญ|ดอลลาร์|ทอง)/;
+
+// ปีหลังวันที่ เช่น "15 มกราคม 2569" (พ.ศ. แปลงเป็น ค.ศ. ให้) คืน { year, len } หรือ null
+function readYear(rest, baseP) {
+    const m = rest.match(/^\s*(พ\.ศ\.|ค\.ศ\.)?\s*(\d{4})(?!\d)/);
+    if (!m) return null;
+    if (QUANTITY_AFTER.test(rest.slice(m[0].length))) return null;
+
+    let year = Number(m[2]);
+    const storyIsBE = baseP && baseP.y >= 2400;
+    const buddhist = m[1] === 'พ.ศ.' || (!m[1] && year >= 2400 && year <= 2700 && !storyIsBE);
+
+    if (buddhist) year -= 543;
+    if (year < 1 || year > 9999) return null;
+
+    return { year, len: m[0].length };
+}
+
+function addUnits(base, n, unit) {
+    if (unit === 'วัน') return addDays(base, n);
+    if (unit === 'สัปดาห์' || unit === 'อาทิตย์') return addDays(base, n * 7);
+    if (unit === 'เดือน') return addMonths(base, n);
+    return addMonths(base, n * 12);
+}
+
+/*
+ * หาวันที่ทั้งหมดในย่อหน้าเดียว
+ * base = "วันนี้ในเรื่อง" (ISO) ว่างได้ ถ้าว่างจะจับเฉพาะวันที่ที่ไม่ต้องอิงวันนี้ (ระบุเดือน/ปี/เทศกาล)
+ * weak = กำกวม (เช่น "พรุ่งนี้" เฉย ๆ) ต้องมีคำบริบทหรือเวลาอยู่ใกล้ ๆ ถึงจะนับ
+ */
+function findDateHits(text, base) {
+    const hits = [];
+    const used = [];
+    const baseP = base ? parseISO(base) : null;
+    const anchor = baseP ? base : realTodayISO();
+
+    const free = (a, b) => !used.some(([s, e]) => a < e && b > s);
+
+    const take = (re, fn) => {
+        re.lastIndex = 0;
+        let m;
+
+        while ((m = re.exec(text))) {
+            if (m[0] === '') { re.lastIndex++; continue; }
+
+            const a = m.index;
+            let b = a + m[0].length;
+
+            if (!free(a, b)) continue;
+
+            const r = fn(m, a, b);
+
+            // วันที่ที่ผิดรูป (เช่น 31 ก.พ.) กินช่วงข้อความทิ้ง ไม่ให้ตัวอื่นหยิบตัวเลขเดิมไปตีความซ้ำเป็นวันอื่น
+            if (r && r.skip) {
+                used.push([a, b]);
+                continue;
+            }
+
+            if (!r || !r.date) continue;
+
+            if (r.end > b) b = r.end;
+
+            used.push([a, b]);
+            hits.push({ index: a, end: b, matched: text.slice(a, b), date: r.date, weak: Boolean(r.weak), approx: Boolean(r.approx) });
+        }
+    };
+
+    take(RE_ISO, m => {
+        const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+        return validYmd(y, mo, d) ? { date: isoOf(y, mo, d) } : { skip: true };
+    });
+
+    take(RE_DMY, (m, a, b) => {
+        const day = Number(m[1]);
+        const month = monthOf(m[2]);
+
+        if (!month) return null;
+        if (day < 1 || day > 31) return { skip: true };
+
+        const tail = readYear(text.slice(b), baseP);
+
+        if (tail) {
+            return validYmd(tail.year, month, day)
+                ? { date: isoOf(tail.year, month, day), end: b + tail.len }
+                : { skip: true, end: b + tail.len };
+        }
+
+        const date = nextAnnual(anchor, month, day);
+        return date ? { date } : { skip: true };
+    });
+
+    take(RE_NUM_DATE, (m, a, b) => {
+        const prev = text[a - 1];
+        if (prev && /[\d/.\-]/.test(prev)) return null;
+
+        const day = Number(m[1]), month = Number(m[2]);
+        if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+        if (m[3]) {
+            if (m[3].length === 3) return null;
+
+            let year = Number(m[3]);
+
+            if (m[3].length === 2) year += 2000;
+            else if (year >= 2400 && year <= 2700 && !(baseP && baseP.y >= 2400)) year -= 543;
+
+            return validYmd(year, month, day) ? { date: isoOf(year, month, day) } : null;
+        }
+
+        // 1/2 อาจเป็นเศษส่วน จึงถือว่ากำกวม
+        const date = nextAnnual(anchor, month, day);
+        return date ? { date, weak: true } : null;
+    });
+
+    take(RE_FESTIVAL, m => {
+        const fest = CAL_FESTIVALS.find(f => f.names.includes(m[0]));
+        if (!fest) return null;
+
+        const date = nextAnnual(anchor, fest.m, fest.d);
+        return date ? { date, approx: fest.approx } : null;
+    });
+
+    // ที่เหลือต้องอิงวันนี้ในเรื่อง
+    if (baseP) {
+        take(RE_DAY_OF_MONTH, m => {
+            const dom = Number(m[1]);
+            if (dom < 1 || dom > 31) return null;
+
+            const date = nextDayOfMonth(base, dom);
+            return date ? { date } : null;
+        });
+
+        take(RE_IN_N, m => {
+            const date = addUnits(base, Number(m[1]), m[2]);
+            return date ? { date } : null;
+        });
+
+        take(RE_AGO_N, m => {
+            const date = addUnits(base, -Number(m[1]), m[2]);
+            return date ? { date } : null;
+        });
+
+        take(RE_WEEKDAY, m => {
+            const date = resolveWeekday(base, TH_WEEKDAYS[m[1]], m[2]);
+            return date ? { date, weak: !m[2] } : null;
+        });
+
+        take(RE_WEEK_MONTH, m => {
+            const sign = m[2] === 'หน้า' ? 1 : -1;
+            const date = m[1] === 'เดือน' ? addMonths(base, sign) : addDays(base, sign * 7);
+            return date ? { date } : null;
+        });
+
+        take(RE_DAYWORD, m => {
+            const date = addDays(base, DAYWORD_OFFSET[m[0]] || 0);
+            return date ? { date, weak: true } : null;
+        });
+    }
+
+    return hits.sort((x, y) => x.index - y.index);
+}
+
+function hasCalKeyword(text) {
+    return CAL_KEYWORDS.some(word => text.includes(word));
+}
+
+function windowOf(text, a, b) {
+    return text.slice(Math.max(0, a - 30), Math.min(text.length, b + 45));
+}
+
+function makeTitle(text, a, b) {
+    const start = Math.max(0, a - 24);
+    const end = Math.min(text.length, b + 40);
+
+    let title = text.slice(start, end).replace(/\s+/g, ' ').replace(/^[\s,.:;"'“”‘’()[\]*_~-]+/, '').trim();
+
+    if (start > 0) title = `…${title}`;
+    if (end < text.length) title = `${title}…`;
+
+    return title;
+}
+
+function nearestTime(times, a, b) {
+    let best = null;
+    let bestDist = 41;
+
+    for (const t of times) {
+        const dist = a > t.end ? a - t.end : (t.index > b ? t.index - b : 0);
+
+        if (dist < bestDist) {
+            best = t;
+            bestDist = dist;
+        }
+    }
+
+    return best;
+}
+
+/*
+ * จับรายการนัดหมายจากข้อความเดียว
+ * คืน [{ date, time, title, matched, approx }] (date เป็น ISO, time เป็น 'HH:MM' หรือ '')
+ */
+function detectDates(rawText, base) {
+    const text = normalizeDigits(rawText);
+    const out = [];
+    const seen = new Set();
+
+    const push = (c, key) => {
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(c);
+    };
+
+    for (const para of text.split(/\r?\n+/)) {
+        if (!para.trim()) continue;
+
+        const hits = findDateHits(para, base);
+        const times = findTimes(para);
+
+        for (const h of hits) {
+            const keyword = hasCalKeyword(windowOf(para, h.index, h.end));
+            const t = nearestTime(times, h.index, h.end);
+
+            if (h.weak && !keyword && !t) continue;
+
+            const time = t ? t.time : '';
+
+            push({
+                date: h.date,
+                time,
+                title: makeTitle(para, h.index, h.end),
+                matched: h.matched,
+                approx: h.approx
+            }, `${h.date}|${time}|${h.matched}`);
+        }
+
+        // มีแต่เวลา ("นัดกันบ่ายสอง") และมีคำบริบท → ถือเป็นวันนี้ในเรื่อง
+        if (!hits.length && times.length && base) {
+            const t = times[0];
+
+            if (hasCalKeyword(windowOf(para, t.index, t.end))) {
+                push({
+                    date: base,
+                    time: t.time,
+                    title: makeTitle(para, t.index, t.end),
+                    matched: para.slice(t.index, t.end),
+                    approx: false
+                }, `${base}|${t.time}|${para.slice(t.index, t.end)}`);
+            }
+        }
+    }
+
+    return out;
+}
+
+/* ============================================================
+ * วงล้อลูกแก้ว: เห็นทีละ 3 ลูก ปัดนิ้วตามแนวโค้งเพื่อหมุน
+ * ลูกที่หลุดออกจะจางหายไปตามโค้ง ลูกใหม่เลื่อนเข้ามาแทน ลำดับวนกลับต้นได้ไม่จำกัด
+ * เพิ่มลูกแก้วใหม่ได้ที่ CATEGORIES ด้านบน วงล้อปรับตัวเอง
+ * ============================================================ */
+
+const WHEEL_SLOTS = 3;   // เห็นกี่ลูกพร้อมกัน (ถ้ามีลูกมากกว่านี้ถึงจะหมุนได้)
+const WHEEL_START = 1;   // ตอนเปิดครั้งแรก ให้ลูกลำดับที่เท่าไร (นับจาก 0) อยู่กลางโค้ง
+
+let wheelPos = WHEEL_START;   // ตำแหน่งวงล้อ หน่วยเป็น "จำนวนลูก" (เป็นทศนิยมได้ขณะกำลังหมุน)
+let wheelSx = 1;
+let wheelSy = 1;
+let wheelCx = 0;
+let wheelCy = 0;
+let wheelAnim = 0;
+let wheelDrag = null;
+let wheelMoved = false;
+let wheelMovedTimer = 0;
+let wheelScrollAt = 0;
+
+function wheelSpins() {
+    return CATEGORIES.length > WHEEL_SLOTS;
+}
+
+// ระยะของลูกที่ i จากกลางโค้ง (ลบ = สูงกว่า, บวก = ต่ำกว่า) วนรอบแบบวงล้อ
+function wheelRel(i, n) {
+    let rel = (i - wheelPos) % n;
+
+    if (rel >= n / 2) rel -= n;
+    if (rel < -n / 2) rel += n;
+
+    return rel;
+}
+
+// วางลูกทุกลูกบนส่วนโค้งตาม wheelPos: ห่างกลางโค้งเกิน 1 ลูกจะค่อย ๆ จางและเล็กลง
+function layoutWheel() {
+    const panel = document.getElementById(PANEL_ID);
+    if (!panel) return;
+
+    const items = panel.querySelectorAll('.ltt-item');
+    const n = items.length;
+    const spin = wheelSpins();
+
+    items.forEach((item, i) => {
+        const rel = spin ? wheelRel(i, n) : i - (n - 1) / 2;
+        const opacity = spin ? Math.max(0, Math.min(1, 2 - Math.abs(rel))) : 1;
+        const theta = (45 + ARC_STEP * rel) * Math.PI / 180;
+
+        item.style.setProperty('--x', `${(wheelSx * ARC_RADIUS * Math.sin(theta)).toFixed(1)}px`);
+        item.style.setProperty('--y', `${(-wheelSy * ARC_RADIUS * Math.cos(theta)).toFixed(1)}px`);
+        item.style.setProperty('--o', opacity.toFixed(3));
+        item.style.setProperty('--s', (0.55 + 0.45 * opacity).toFixed(3));
+        item.style.setProperty('--d', `${Math.max(0, Math.round(rel) + 1) * 45}ms`);
+
+        item.classList.toggle('ltt-off', opacity < 0.4);
+    });
+}
+
+// แผ่นรับนิ้วรูปแถบโค้ง (ครอบเฉพาะแนวส่วนโค้ง ไม่บังลูกแก้วหลัก) ใช้ clip-path ตัดรูป
+// จึงกันหน้าจอเลื่อนตามนิ้วได้โดยไม่บังการแตะส่วนอื่น
+function layoutCatcher(panel) {
+    const catcher = panel.querySelector('.ltt-catch');
+    if (!catcher) return;
+
+    const outer = ARC_RADIUS + 28;
+    const inner = Math.max(26, ARC_RADIUS - 26);
+    const from = -22;
+    const to = 112;
+    const stepDeg = 8;
+
+    const point = (r, deg) => {
+        const t = deg * Math.PI / 180;
+        return `${(outer + wheelSx * r * Math.sin(t)).toFixed(1)}px ${(outer - wheelSy * r * Math.cos(t)).toFixed(1)}px`;
+    };
+
+    const points = [];
+
+    for (let a = from; a <= to; a += stepDeg) points.push(point(outer, a));
+    for (let a = to; a >= from; a -= stepDeg) points.push(point(inner, a));
+
+    catcher.style.width = `${outer * 2}px`;
+    catcher.style.height = `${outer * 2}px`;
+    catcher.style.clipPath = `polygon(${points.join(',')})`;
+}
+
+function cancelWheelAnim() {
+    if (!wheelAnim) return;
+
+    cancelAnimationFrame(wheelAnim);
+    wheelAnim = 0;
+}
+
+// หยุดทุกอย่างแล้วเกลี่ยวงล้อให้ตรงช่อง (ใช้ตอนปิดแผง)
+function settleWheel() {
+    cancelWheelAnim();
+    wheelDrag = null;
+
+    const n = CATEGORIES.length;
+
+    if (n > 0) wheelPos = ((Math.round(wheelPos) % n) + n) % n;
+
+    document.getElementById(PANEL_ID)?.classList.remove('ltt-rolling');
+    layoutWheel();
+}
+
+// เลื่อนวงล้อไปที่ตำแหน่ง target (จำนวนเต็ม) ด้วยแอนิเมชันชะลอตอนท้าย
+function snapWheel(target) {
+    cancelWheelAnim();
+
+    const panel = document.getElementById(PANEL_ID);
+    if (!panel) return;
+
+    const n = CATEGORIES.length;
+    const from = wheelPos;
+    const start = performance.now();
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const duration = reduce ? 0 : 260;
+
+    panel.classList.add('ltt-rolling');
+
+    const finish = () => {
+        wheelAnim = 0;
+        wheelPos = ((Math.round(target) % n) + n) % n;
+        layoutWheel();
+        panel.classList.remove('ltt-rolling');
+    };
+
+    const step = now => {
+        const t = duration ? Math.min(1, (now - start) / duration) : 1;
+        const eased = 1 - Math.pow(1 - t, 3);
+
+        wheelPos = from + (target - from) * eased;
+        layoutWheel();
+
+        if (t < 1) wheelAnim = requestAnimationFrame(step);
+        else finish();
+    };
+
+    wheelAnim = requestAnimationFrame(step);
+}
+
+// มุมของนิ้วรอบลูกแก้ว (องศา วัดจากแนวตั้ง ใช้ระบบเดียวกับตอนวางลูก)
+function wheelTheta(event) {
+    const dx = event.clientX - wheelCx;
+    const dy = event.clientY - wheelCy;
+
+    return Math.atan2(dx * wheelSx, -dy * wheelSy) * 180 / Math.PI;
+}
+
+function onWheelPointerDown(event) {
+    if (!panelOpen || !wheelSpins()) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    const target = event.target;
+    const onWheel = target?.closest?.(`#${PANEL_ID} .ltt-item`) || target?.closest?.(`#${PANEL_ID} .ltt-catch`);
+
+    if (!onWheel) return;
+
+    const wasAnimating = Boolean(wheelAnim);
+    cancelWheelAnim();
+
+    clearTimeout(wheelMovedTimer);
+    wheelMoved = false;
+
+    const theta = wheelTheta(event);
+
+    wheelDrag = {
+        id: event.pointerId,
+        x0: event.clientX,
+        y0: event.clientY,
+        last: theta,
+        acc: 0,
+        pos0: wheelPos,
+        wasAnimating,
+        samples: [{ t: performance.now(), pos: wheelPos }]
+    };
+}
+
+function onWheelPointerMove(event) {
+    if (!wheelDrag || event.pointerId !== wheelDrag.id) return;
+
+    if (!wheelMoved) {
+        // ขยับน้อยกว่านี้ถือว่าเป็นการแตะ ไม่ใช่การปัด
+        if (Math.hypot(event.clientX - wheelDrag.x0, event.clientY - wheelDrag.y0) < 6) return;
+
+        wheelMoved = true;
+        document.getElementById(PANEL_ID)?.classList.add('ltt-rolling');
+    }
+
+    const theta = wheelTheta(event);
+    let delta = theta - wheelDrag.last;
+
+    if (delta > 180) delta -= 360;
+    else if (delta < -180) delta += 360;
+
+    wheelDrag.acc += delta;
+    wheelDrag.last = theta;
+
+    // นิ้วเลื่อนไปตามโค้งกี่องศา ลูกก็เลื่อนตามนิ้วเท่านั้น
+    wheelPos = wheelDrag.pos0 - wheelDrag.acc / ARC_STEP;
+
+    const now = performance.now();
+
+    wheelDrag.samples.push({ t: now, pos: wheelPos });
+    if (wheelDrag.samples.length > 8) wheelDrag.samples.shift();
+
+    layoutWheel();
+}
+
+function onWheelPointerUp(event) {
+    if (!wheelDrag || event.pointerId !== wheelDrag.id) return;
+
+    const drag = wheelDrag;
+    wheelDrag = null;
+
+    if (!wheelMoved) {
+        // ปัดค้างระหว่างช่องแล้วนิ้วแตะหยุด → เข้าช่องที่ใกล้สุด
+        if (drag.wasAnimating) snapWheel(Math.round(wheelPos));
+        // แตะแถบโค้งตรงที่ว่าง = ปิดแผง (เหมือนแตะข้างนอก)
+        else if (event.target?.closest?.(`#${PANEL_ID} .ltt-catch`) && !itemAtPoint(event)) closePanel();
+
+        return;
+    }
+
+    // ปัดเสร็จ: กันไม่ให้คลิกที่ตามมาถูกนับเป็นการแตะข้างนอกหรือแตะลูกแก้ว
+    lastActivate = Date.now();
+    wheelMovedTimer = setTimeout(() => { wheelMoved = false; }, 400);
+
+    // ความเร็วช่วงท้าย → ปัดแรงไปต่ออีกหน่อย
+    const now = performance.now();
+    const recent = drag.samples.filter(sample => now - sample.t < 120);
+    let velocity = 0;
+
+    if (recent.length >= 2) {
+        const first = recent[0];
+        const last = recent[recent.length - 1];
+
+        if (last.t > first.t) velocity = (last.pos - first.pos) / (last.t - first.t);
+    }
+
+    const base = Math.round(wheelPos);
+    const target = Math.round(wheelPos + velocity * 160);
+
+    snapWheel(Math.max(base - 3, Math.min(base + 3, target)));
+}
+
+// เมาส์: หมุนลูกกลิ้งทีละลูก
+function onWheelScroll(event) {
+    if (!panelOpen || !wheelSpins()) return;
+    if (!event.target?.closest?.(`#${PANEL_ID}`)) return;
+
+    event.preventDefault();
+
+    const now = Date.now();
+    if (now - wheelScrollAt < 140) return;
+    wheelScrollAt = now;
+
+    snapWheel(Math.round(wheelPos) + (event.deltaY > 0 ? 1 : -1));
+}
+
+/* ============================================================
+ * Dice / Random: ทอยลูกเต๋า เหรียญ ใช่/ไม่ และตารางสุ่มของตัวเอง
+ * สุ่มด้วยเบราว์เซอร์ล้วน ๆ ไม่เรียก AI จึงไม่กินโควต้า
+ * ผลลัพธ์เลือกได้ว่าจะใส่ลงกล่องข้อความ (บอทเห็น) หรือดูเฉพาะตัวเอง
+ * ============================================================ */
+
+const DICE_PRESETS = ['d20', 'd6', 'd100'];
+const DICE_HISTORY_MAX = 30;
+const DICE_SHARE_KEY = `${EXT_ID}-dice-share`;
+const DICE_TABLES_KEY = `${EXT_ID}-dice-tables`;
+
+// ตารางตั้งต้น (แก้/ลบได้ในหน้าต่าง Dice) ตารางของตัวเองเก็บในเบราว์เซอร์ ใช้ได้ทุกแชท
+const DICE_SEED_TABLES = [
+    {
+        id: 'seed-events',
+        name: 'เหตุการณ์',
+        items: [
+            'พบร่องรอยแปลก ๆ บนพื้น',
+            'มีเสียงฝีเท้าตามมาจากด้านหลัง',
+            'สภาพอากาศเปลี่ยนกะทันหัน',
+            'เจอพ่อค้าเร่ที่มีของแปลกตา',
+            'ทางข้างหน้าถูกปิดกั้น',
+            'ได้ยินเสียงกระซิบจากที่ไกล ๆ',
+            'พบของที่ใครบางคนทำตกไว้',
+            'สัตว์ป่าโผล่ออกมากลางทาง'
+        ]
+    },
+    {
+        id: 'seed-hints',
+        name: 'คำใบ้',
+        items: [
+            'ประตูบานที่ไม่เคยถูกเปิด',
+            'จดหมายที่ยังไม่ได้ส่ง',
+            'กุญแจดอกเก่า',
+            'เสียงระฆังจากที่ไกล ๆ',
+            'รอยเปื้อนบนบันได',
+            'แผนที่ที่ขาดไปครึ่งแผ่น'
+        ]
+    }
+];
+
+let diceOpen = false;
+let diceShare = loadDiceShare();      // true = ใส่ผลลงกล่องข้อความ (บอทเห็น) / false = ดูเฉพาะตัวเอง
+let diceTables = loadDiceTables();
+let diceHistory = [];                 // ใหม่สุดอยู่บนสุด (เก็บเฉพาะรอบนี้ ไม่บันทึก)
+let diceSeq = 0;
+let diceEditing = null;               // null = หน้าทอย / 'new' หรือ id ตาราง = หน้าแก้ตาราง
+let diceFormula = '2d6+3';
+let diceDeleteArm = 0;
+
+function loadDiceShare() {
+    try {
+        return localStorage.getItem(DICE_SHARE_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function saveDiceShare() {
+    try { localStorage.setItem(DICE_SHARE_KEY, diceShare ? '1' : '0'); } catch { /* ข้าม */ }
+}
+
+function loadDiceTables() {
+    const seeds = () => DICE_SEED_TABLES.map(table => ({ ...table, items: [...table.items] }));
+
+    try {
+        const raw = localStorage.getItem(DICE_TABLES_KEY);
+
+        if (raw === null) return seeds();
+
+        const list = JSON.parse(raw);
+
+        if (!Array.isArray(list)) return seeds();
+
+        return list
+            .filter(table => table && typeof table.name === 'string' && Array.isArray(table.items))
+            .map(table => ({
+                id: String(table.id || makeId()),
+                name: table.name,
+                items: table.items.map(String)
+            }));
+    } catch {
+        return seeds();
+    }
+}
+
+function saveDiceTables() {
+    try {
+        localStorage.setItem(DICE_TABLES_KEY, JSON.stringify(diceTables));
+    } catch {
+        showToast('✖ บันทึกตารางสุ่มไม่สำเร็จ');
+    }
+}
+
+function makeId() {
+    return `${Date.now().toString(36)}${secureInt(46656).toString(36)}`;
+}
+
+// ใส่ผลลัพธ์ลงกล่องข้อความที่เคอร์เซอร์ (เว้นวรรคนำให้ถ้าติดกับตัวอักษรก่อนหน้า)
+function insertRollText(text) {
+    const box = getBox();
+
+    if (!box || typeof box.value !== 'string') {
+        showToast('✖ หากล่องข้อความไม่เจอ');
+        return false;
+    }
+
+    const at = box.selectionStart ?? box.value.length;
+    const before = box.value.slice(0, at);
+    const lead = before && !/\s$/.test(before) ? ' ' : '';
+
+    insertText(lead + text);
+
+    return true;
+}
+
+function logRoll(text) {
+    const entry = { id: ++diceSeq, text, shared: false };
+
+    if (diceShare && insertRollText(text)) entry.shared = true;
+
+    diceHistory.unshift(entry);
+    if (diceHistory.length > DICE_HISTORY_MAX) diceHistory.length = DICE_HISTORY_MAX;
+
+    renderDiceList();
+}
+
+function rollFormulaUi(expression) {
+    const result = rollFormula(expression);
+
+    if (result.error) {
+        showToast(`✖ ${result.error}`, 3500);
+        return;
+    }
+
+    logRoll(result.text);
+}
+
+function rollTableUi(id) {
+    const text = tableRollText(diceTables.find(table => table.id === id));
+
+    if (!text) {
+        showToast('✖ ตารางนี้ยังว่างอยู่', 3000);
+        return;
+    }
+
+    logRoll(text);
+}
+
+function renderDiceList() {
+    const win = document.getElementById(DICE_ID);
+    if (!win) return;
+
+    const list = win.querySelector('.ltt-list');
+    const meta = win.querySelector('.ltt-meta');
+
+    list.textContent = '';
+    meta.textContent = diceHistory.length ? `ทอยแล้ว ${diceHistory.length} ครั้ง` : '';
+
+    if (!diceHistory.length) {
+        list.appendChild(makeEl('div', 'ltt-note', 'แตะปุ่มด้านบนเพื่อทอย'));
+        positionWin(win);
+        return;
+    }
+
+    diceHistory.forEach((entry, index) => {
+        const card = makeEl('div', index === 0 ? 'ltt-card ltt-roll ltt-latest' : 'ltt-card ltt-roll');
+
+        card.appendChild(makeEl('div', 'ltt-roll-text', entry.text));
+
+        const row = makeEl('div', 'ltt-keys ltt-roll-act');
+
+        row.appendChild(makeAction(entry.shared ? 'ใส่ในกล่องแล้ว' : 'ใส่ในกล่อง', button => {
+            if (insertRollText(entry.text)) {
+                entry.shared = true;
+                button.textContent = 'ใส่ในกล่องแล้ว';
+            }
+        }));
+
+        card.appendChild(row);
+        list.appendChild(card);
+    });
+
+    positionWin(win);
+}
+
+function renderTableEditor(host) {
+    const isNew = diceEditing === 'new';
+    const table = isNew ? { id: '', name: '', items: [] } : diceTables.find(item => item.id === diceEditing);
+
+    if (!table) {
+        diceEditing = null;
+        return;
+    }
+
+    const nameBox = makeEl('div', 'ltt-search-box');
+    const name = makeEl('input', 'ltt-search-input');
+
+    name.type = 'text';
+    name.placeholder = 'ชื่อตาราง เช่น เหตุการณ์';
+    name.maxLength = 24;
+    name.value = table.name;
+    nameBox.appendChild(name);
+
+    const areaBox = makeEl('div', 'ltt-search-box');
+    const area = makeEl('textarea', 'ltt-search-input ltt-area');
+
+    area.placeholder = 'หนึ่งบรรทัด = หนึ่งผลลัพธ์';
+    area.rows = 6;
+    area.value = table.items.join('\n');
+    areaBox.appendChild(area);
+
+    const bar = makeEl('div', 'ltt-bar');
+
+    bar.appendChild(makeTool('บันทึก', () => {
+        const title = name.value.trim();
+        const items = area.value.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 500);
+
+        if (!title) {
+            showToast('✖ ตั้งชื่อตารางก่อน');
+            return;
+        }
+
+        if (!items.length) {
+            showToast('✖ ใส่ผลลัพธ์อย่างน้อย 1 บรรทัด');
+            return;
+        }
+
+        if (isNew) {
+            diceTables.push({ id: makeId(), name: title, items });
+        } else {
+            table.name = title;
+            table.items = items;
+        }
+
+        saveDiceTables();
+        diceEditing = null;
+        renderDice();
+    }, 'ltt-on'));
+
+    bar.appendChild(makeTool('ยกเลิก', () => {
+        diceEditing = null;
+        renderDice();
+    }));
+
+    if (!isNew) {
+        // แตะครั้งแรก = ขอยืนยัน แตะอีกครั้งภายใน 3 วินาที = ลบ
+        bar.appendChild(makeTool('ลบ', button => {
+            if (!diceDeleteArm || Date.now() - diceDeleteArm > 3000) {
+                diceDeleteArm = Date.now();
+                button.textContent = 'แตะอีกครั้งเพื่อลบ';
+                button.classList.add('ltt-danger');
+                return;
+            }
+
+            diceDeleteArm = 0;
+            diceTables = diceTables.filter(item => item.id !== table.id);
+            saveDiceTables();
+            diceEditing = null;
+            renderDice();
+        }));
+    }
+
+    host.appendChild(nameBox);
+    host.appendChild(areaBox);
+    host.appendChild(bar);
+}
+
+function renderDice() {
+    const win = document.getElementById(DICE_ID);
+    if (!win) return;
+
+    const ctl = win.querySelector('.ltt-dice-ctl');
+    const list = win.querySelector('.ltt-list');
+
+    ctl.textContent = '';
+    diceDeleteArm = 0;
+
+    if (diceEditing) {
+        renderTableEditor(ctl);
+
+        if (diceEditing) {
+            list.hidden = true;
+            win.querySelector('.ltt-meta').textContent = 'แก้ตารางสุ่ม';
+            positionWin(win);
+            return;
+        }
+    }
+
+    list.hidden = false;
+
+    // แถวบน: เลือกว่าผลลัพธ์ให้บอทเห็นหรือไม่
+    const shareBar = makeEl('div', 'ltt-bar');
+
+    const shareButton = makeTool(diceShare ? '👁 บอทเห็นผล' : '🙈 เฉพาะเรา', () => {
+        diceShare = !diceShare;
+        saveDiceShare();
+        renderDice();
+    }, diceShare ? 'ltt-on' : '');
+
+    shareButton.title = 'สลับ: ใส่ผลลงกล่องข้อความให้บอทเห็น / ดูเฉพาะตัวเอง';
+    shareBar.appendChild(shareButton);
+    shareBar.appendChild(makeEl('span', 'ltt-hint', diceShare ? 'ใส่ผลลงกล่องข้อความทันที' : 'ดูเฉพาะในหน้าต่างนี้'));
+    ctl.appendChild(shareBar);
+
+    // ปุ่มทอยด่วน
+    const quickBar = makeEl('div', 'ltt-bar');
+
+    for (const preset of DICE_PRESETS) {
+        quickBar.appendChild(makeTool(preset, () => rollFormulaUi(preset)));
+    }
+
+    quickBar.appendChild(makeTool('🪙', () => logRoll(flipCoinText())));
+    quickBar.appendChild(makeTool('ใช่/ไม่ใช่', () => logRoll(yesNoText())));
+    ctl.appendChild(quickBar);
+
+    // สูตรเอง
+    const formulaBar = makeEl('div', 'ltt-bar');
+    const input = makeEl('input', 'ltt-search-input ltt-grow');
+
+    input.type = 'text';
+    input.value = diceFormula;
+    input.placeholder = '2d6+3';
+    input.autocomplete = 'off';
+    input.autocapitalize = 'off';
+    input.spellcheck = false;
+    input.setAttribute('enterkeyhint', 'go');
+    input.setAttribute('aria-label', 'สูตรลูกเต๋า');
+
+    input.addEventListener('input', () => { diceFormula = input.value; });
+    input.addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        rollFormulaUi(input.value);
+    });
+
+    formulaBar.appendChild(input);
+    formulaBar.appendChild(makeTool('ทอย', () => rollFormulaUi(input.value), 'ltt-on'));
+    ctl.appendChild(formulaBar);
+
+    // ตารางสุ่ม
+    const tableBar = makeEl('div', 'ltt-bar');
+
+    for (const table of diceTables) {
+        const group = makeEl('span', 'ltt-grp2');
+
+        group.appendChild(makeTool(`📜 ${table.name}`, () => rollTableUi(table.id), 'ltt-chip'));
+        group.appendChild(makeTool('✎', () => {
+            diceEditing = table.id;
+            renderDice();
+        }, 'ltt-chip-edit'));
+
+        tableBar.appendChild(group);
+    }
+
+    tableBar.appendChild(makeTool('＋ ตาราง', () => {
+        diceEditing = 'new';
+        renderDice();
+    }, 'ltt-chip'));
+
+    ctl.appendChild(tableBar);
+
+    renderDiceList();
+}
+
+function createDiceWin() {
+    const existing = document.getElementById(DICE_ID);
+    if (existing) return existing;
+
+    return createWin(DICE_ID, 'Dice', '<div class="ltt-dice-ctl"></div><div class="ltt-list"></div>');
+}
+
+function openDice() {
+    closeSheet();
+    closeSearch();
+    closeWrite();
+    closeCal();
+
+    const win = createDiceWin();
+
+    diceOpen = true;
+    diceEditing = null;
+    win.classList.add('ltt-visible');
+    syncOrb();
+
+    renderDice();
+    positionWin(win);
+}
+
+function closeDice() {
+    if (!diceOpen) return;
+
+    diceOpen = false;
+    document.getElementById(DICE_ID)?.classList.remove('ltt-visible');
+    syncOrb();
+}
+
+function toggleDice() {
+    if (diceOpen) closeDice();
+    else openDice();
+}
+
+/* ============================================================
+ * ปฏิทินในเรื่อง: จับวันนัด/งาน/เทศกาลจากแชทด้วยการจับคำ (ไม่เรียก AI)
+ * เก็บใน chat metadata ของแชทนั้น ๆ (ไฟล์แชทเดียวกัน แยกตามแชท ไม่หายตอนสลับแชท)
+ *   today = "วันนี้ในเรื่อง" (ใช้แปลง พรุ่งนี้ / วันศุกร์หน้า ฯลฯ)
+ *   items = รายการ { id, key, src, auto, state: 'new' | 'ok' | 'x', date, time, title, approx }
+ *           new = จับได้รอยืนยัน / ok = ยืนยันแล้วหรือเพิ่มเอง / x = ลบแล้ว (เก็บไว้กันจับซ้ำ)
+ * ============================================================ */
+
+let calOpen = false;
+let calEditing = null;   // id ของรายการที่กำลังแก้
+let calScanArm = 0;
+
+function calMeta() {
+    const meta = getCtx()?.chatMetadata ?? stModule?.chat_metadata;
+
+    return meta && typeof meta === 'object' ? meta : null;
+}
+
+function calData(create) {
+    const meta = calMeta();
+    if (!meta) return null;
+
+    let data = meta.ltt_cal;
+
+    if (!data || typeof data !== 'object' || !Array.isArray(data.items)) {
+        if (!create) return null;
+
+        data = { today: '', items: [] };
+        meta.ltt_cal = data;
+    }
+
+    if (typeof data.today !== 'string') data.today = '';
+
+    return data;
+}
+
+function calSave() {
+    const ctx = getCtx();
+    const save = ctx?.saveMetadataDebounced || ctx?.saveMetadata || stModule?.saveMetadataDebounced || stModule?.saveMetadata;
+
+    try {
+        const result = save?.call(ctx);
+        if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (error) {
+        console.warn(`[${EXT_ID}] บันทึกปฏิทินไม่สำเร็จ`, error);
+    }
+}
+
+function calPendingCount() {
+    const data = calData(false);
+
+    return data ? data.items.filter(item => item.state === 'new').length : 0;
+}
+
+function updateCalBadge() {
+    const badge = document.querySelector(`#${PANEL_ID} .ltt-item[data-id="calendar"] .ltt-count`);
+    if (!badge) return;
+
+    const count = calPendingCount();
+
+    badge.textContent = String(count);
+    badge.classList.toggle('ltt-hide', count === 0);
+}
+
+// ตัดแท็ก/บล็อกความคิดออกก่อนจับคำ
+function calCleanText(text) {
+    return String(text ?? '')
+        .replace(/<(think|thinking|details)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ');
+}
+
+// ใส่ผลที่จับได้ของข้อความ #index คืนจำนวนรายการ "ใหม่จริง ๆ"
+// (รายการรอยืนยันของข้อความเดิมถูกแทนที่ เผื่อแก้ข้อความ/สุ่มคำตอบใหม่ ส่วนที่ยืนยัน/ลบแล้วไม่แตะ)
+function calApply(data, index, found) {
+    const previous = new Set();
+
+    data.items = data.items.filter(item => {
+        const stale = item.src === index && item.state === 'new' && item.auto;
+
+        if (stale) previous.add(item.key);
+
+        return !stale;
+    });
+
+    const have = new Set(data.items.map(item => item.key).filter(Boolean));
+    let added = 0;
+
+    for (const hit of found) {
+        const key = `${index}|${hit.matched}|${hit.date}|${hit.time}`;
+
+        if (have.has(key)) continue;
+        have.add(key);
+
+        data.items.push({
+            id: makeId(),
+            key,
+            src: index,
+            auto: true,
+            state: 'new',
+            date: hit.date,
+            time: hit.time,
+            title: hit.title,
+            approx: hit.approx
+        });
+
+        if (!previous.has(key)) added += 1;
+    }
+
+    // รายการที่ลบแล้วเก็บไว้กันจับซ้ำ แต่ไม่ให้โตไม่จำกัด
+    const dead = data.items.filter(item => item.state === 'x');
+
+    if (dead.length > 300) {
+        const drop = new Set(dead.slice(0, dead.length - 300).map(item => item.id));
+        data.items = data.items.filter(item => !drop.has(item.id));
+    }
+
+    return added;
+}
+
+// ข้อความใหม่/แก้ไข/สุ่มใหม่ → จับวันที่ (สร้างข้อมูลปฏิทินของแชทก็ต่อเมื่อเจออะไร)
+function calScanMessage(mesId) {
+    try {
+        const chat = getCtx()?.chat;
+        if (!chat?.length) return;
+
+        const index = Number.isInteger(mesId) ? mesId : chat.length - 1;
+        const message = chat[index];
+
+        if (!message || message.is_system) return;
+
+        let data = calData(false);
+        const found = detectDates(calCleanText(message.mes), data?.today || '');
+        const hadPending = Boolean(data?.items.some(item => item.src === index && item.state === 'new' && item.auto));
+
+        if (!found.length && !hadPending) return;
+
+        data = data || calData(true);
+        if (!data) return;
+
+        const added = calApply(data, index, found);
+
+        calSave();
+        updateCalBadge();
+        if (calOpen && !calEditing) renderCal();
+
+        if (added > 0) showToast(`📅 ปฏิทิน: จับได้ ${added} รายการ รอยืนยัน`, 3000);
+    } catch (error) {
+        console.warn(`[${EXT_ID}] calendar scan error`, error);
+    }
+}
+
+// สแกนทั้งแชท (ใช้ "วันนี้ในเรื่อง" ปัจจุบันเป็นฐานของทุกข้อความ)
+function calScanAll() {
+    const chat = getCtx()?.chat;
+
+    if (!chat?.length) {
+        showToast('✖ ยังไม่มีข้อความในแชท');
+        return;
+    }
+
+    const data = calData(true);
+    if (!data) return;
+
+    let added = 0;
+
+    chat.forEach((message, index) => {
+        if (!message || message.is_system) return;
+
+        added += calApply(data, index, detectDates(calCleanText(message.mes), data.today));
+    });
+
+    calSave();
+    updateCalBadge();
+    renderCal();
+    showToast(`📅 สแกนทั้งแชทแล้ว: ได้รายการใหม่ ${added}`, 3500);
+}
+
+function calSetToday(value) {
+    const data = calData(true);
+
+    if (!data) {
+        showToast('✖ ยังไม่ได้เปิดแชท');
+        return;
+    }
+
+    data.today = value;
+    calSave();
+    renderCal();
+}
+
+function calRemove(item) {
+    const data = calData(false);
+    if (!data) return;
+
+    // รายการที่จับอัตโนมัติเก็บเป็น "ลบแล้ว" ไว้กันจับซ้ำ ส่วนที่เพิ่มเองลบทิ้งเลย
+    if (item.auto) item.state = 'x';
+    else data.items = data.items.filter(other => other.id !== item.id);
+
+    calSave();
+    updateCalBadge();
+    renderCal();
+}
+
+function calSorted(items) {
+    return [...items].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+}
+
+function renderCalEdit(item) {
+    const card = makeEl('div', 'ltt-card ltt-cal-edit');
+
+    const when = makeEl('div', 'ltt-bar ltt-bar-in');
+    const date = makeEl('input', 'ltt-search-input ltt-grow');
+    const time = makeEl('input', 'ltt-search-input ltt-time');
+    const title = makeEl('input', 'ltt-search-input');
+
+    date.type = 'date';
+    date.min = '0001-01-01';
+    date.max = '9999-12-31';
+    date.value = item.date || '';
+
+    time.type = 'time';
+    time.value = item.time || '';
+
+    title.type = 'text';
+    title.maxLength = 120;
+    title.placeholder = 'ชื่อนัด/งาน';
+    title.value = item.title || '';
+
+    when.appendChild(date);
+    when.appendChild(time);
+
+    const bar = makeEl('div', 'ltt-bar ltt-bar-in');
+
+    bar.appendChild(makeTool('บันทึก', () => {
+        if (!parseISO(date.value)) {
+            showToast('✖ วันที่ไม่ถูกต้อง');
+            return;
+        }
+
+        item.date = date.value;
+        item.time = time.value || '';
+        item.title = title.value.trim() || '(ไม่มีชื่อ)';
+        item.state = 'ok';
+        item.approx = false;
+        delete item.fresh;
+
+        calEditing = null;
+        calSave();
+        updateCalBadge();
+        renderCal();
+    }, 'ltt-on'));
+
+    bar.appendChild(makeTool('ยกเลิก', () => {
+        calEditing = null;
+
+        if (item.fresh) {
+            const data = calData(false);
+            if (data) data.items = data.items.filter(other => other.id !== item.id);
+        }
+
+        renderCal();
+    }));
+
+    card.appendChild(when);
+    card.appendChild(title);
+    card.appendChild(bar);
+
+    return card;
+}
+
+function renderCalCard(item, today) {
+    if (calEditing === item.id) return renderCalEdit(item);
+
+    const pending = item.state === 'new';
+    const past = Boolean(today) && item.date < today;
+    const card = makeEl('div', `ltt-card${pending ? ' ltt-weak' : ''}${past ? ' ltt-past' : ''}`);
+
+    const top = makeEl('div', 'ltt-card-top');
+
+    top.appendChild(makeEl('span', 'ltt-book', `${item.approx ? '≈ ' : ''}${fmtDate(item.date)}`));
+    if (item.time) top.appendChild(makeEl('span', 'ltt-key', item.time));
+    if (today && item.date === today) top.appendChild(makeEl('span', 'ltt-key ltt-sec', 'วันนี้'));
+
+    card.appendChild(top);
+    card.appendChild(makeEl('div', 'ltt-snip', item.title));
+
+    const row = makeEl('div', 'ltt-keys ltt-roll-act');
+
+    if (pending) {
+        row.appendChild(makeAction('✓ ยืนยัน', () => {
+            item.state = 'ok';
+            calSave();
+            updateCalBadge();
+            renderCal();
+        }));
+    }
+
+    row.appendChild(makeAction('แก้', () => {
+        calEditing = item.id;
+        renderCal();
+    }));
+
+    row.appendChild(makeAction('ลบ', () => calRemove(item)));
+
+    if (item.auto && Number.isInteger(item.src) && item.src >= 0) {
+        row.appendChild(makeAction(`ไปที่ #${item.src}`, () => {
+            closeCal();
+            jumpToMessage(item.src);
+        }));
+    }
+
+    card.appendChild(row);
+
+    return card;
+}
+
+function renderCal() {
+    const win = document.getElementById(CAL_ID);
+    if (!win) return;
+
+    const top = win.querySelector('.ltt-cal-top');
+    const list = win.querySelector('.ltt-list');
+    const meta = win.querySelector('.ltt-meta');
+
+    const data = calData(false);
+    const today = data?.today || '';
+    const items = (data?.items || []).filter(item => item.state !== 'x');
+    const pending = items.filter(item => item.state === 'new').length;
+
+    meta.textContent = items.length ? `รอยืนยัน ${pending} · ยืนยันแล้ว ${items.length - pending}` : '';
+
+    top.textContent = '';
+    list.textContent = '';
+
+    // แถววันนี้ในเรื่อง
+    const dateBar = makeEl('div', 'ltt-bar');
+    const dateInput = makeEl('input', 'ltt-search-input ltt-grow');
+
+    dateInput.type = 'date';
+    dateInput.min = '0001-01-01';
+    dateInput.max = '9999-12-31';
+    dateInput.value = today;
+    dateInput.setAttribute('aria-label', 'วันนี้ในเรื่อง');
+
+    dateInput.addEventListener('change', () => {
+        if (dateInput.value && !parseISO(dateInput.value)) {
+            showToast('✖ วันที่ไม่ถูกต้อง');
+            renderCal();
+            return;
+        }
+
+        calSetToday(dateInput.value);
+    });
+
+    const shift = days => {
+        const next = addDays(today || realTodayISO(), days);
+
+        if (next) calSetToday(next);
+    };
+
+    dateBar.appendChild(makeEl('span', 'ltt-hint', 'วันนี้ในเรื่อง'));
+    dateBar.appendChild(makeTool('‹', () => shift(-1), 'ltt-step'));
+    dateBar.appendChild(dateInput);
+    dateBar.appendChild(makeTool('›', () => shift(1), 'ltt-step'));
+    top.appendChild(dateBar);
+
+    // แถวปุ่ม
+    const actionBar = makeEl('div', 'ltt-bar');
+
+    actionBar.appendChild(makeTool('＋ เพิ่ม', () => {
+        const target = calData(true);
+
+        if (!target) {
+            showToast('✖ ยังไม่ได้เปิดแชท');
+            return;
+        }
+
+        const fresh = {
+            id: makeId(),
+            key: '',
+            src: -1,
+            auto: false,
+            state: 'ok',
+            date: target.today || realTodayISO(),
+            time: '',
+            title: '',
+            approx: false,
+            fresh: true
+        };
+
+        target.items.push(fresh);
+        calEditing = fresh.id;
+        renderCal();
+    }));
+
+    // แตะครั้งแรก = ขอยืนยัน แตะอีกครั้งภายใน 3 วินาที = สแกน
+    actionBar.appendChild(makeTool('สแกนทั้งแชท', button => {
+        if (!calScanArm || Date.now() - calScanArm > 3000) {
+            calScanArm = Date.now();
+            button.textContent = 'แตะอีกครั้งเพื่อสแกน';
+            button.classList.add('ltt-confirm');
+            return;
+        }
+
+        calScanArm = 0;
+        calScanAll();
+    }));
+
+    if (pending > 1) {
+        actionBar.appendChild(makeTool(`✓ ทั้งหมด ${pending}`, () => {
+            items.forEach(item => { if (item.state === 'new') item.state = 'ok'; });
+            calSave();
+            updateCalBadge();
+            renderCal();
+        }, 'ltt-on'));
+    }
+
+    top.appendChild(actionBar);
+
+    // รายการ
+    if (!today) {
+        list.appendChild(makeEl(
+            'div',
+            'ltt-note',
+            'ตั้ง “วันนี้ในเรื่อง” ก่อน จึงจะจับคำอย่าง พรุ่งนี้ / วันศุกร์หน้า ได้ (วันที่ระบุเดือนกับเทศกาลจับได้เลย)'
+        ));
+    }
+
+    if (!items.length) {
+        list.appendChild(makeEl('div', 'ltt-note', 'ยังไม่มีรายการ เมื่อในแชทพูดถึงวันนัดหรืองาน จะขึ้นที่นี่ให้ติ๊กยืนยัน'));
+    } else {
+        calSorted(items).forEach(item => list.appendChild(renderCalCard(item, today)));
+    }
+
+    positionWin(win);
+}
+
+function createCalWin() {
+    const existing = document.getElementById(CAL_ID);
+    if (existing) return existing;
+
+    return createWin(CAL_ID, 'Calendar', '<div class="ltt-cal-top"></div><div class="ltt-list"></div>');
+}
+
+function openCal() {
+    closeSheet();
+    closeSearch();
+    closeWrite();
+    closeDice();
+
+    const win = createCalWin();
+
+    // ทิ้งรายการ "เพิ่มเอง" ที่ค้างอยู่โดยไม่ได้บันทึก
+    const data = calData(false);
+    if (data) data.items = data.items.filter(item => !item.fresh);
+
+    calOpen = true;
+    calEditing = null;
+    win.classList.add('ltt-visible');
+    syncOrb();
+
+    renderCal();
+    positionWin(win);
+}
+
+function closeCal() {
+    if (!calOpen) return;
+
+    calOpen = false;
+    calEditing = null;
+    document.getElementById(CAL_ID)?.classList.remove('ltt-visible');
+    syncOrb();
+}
+
+function toggleCal() {
+    if (calOpen) closeCal();
+    else openCal();
+}
+
+
 export async function init() {
     if (initialized) return;
 
@@ -3327,13 +5405,14 @@ export async function init() {
     globalThis[DISPOSE_KEY] = dispose;
 
     // ลบของเก่าที่ค้างอยู่ก่อนสร้างใหม่ ให้ปุ่ม/แผงทุกชิ้นเป็นของไฟล์นี้ล้วน
-    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, SEARCH_ID, WRITE_ID]) {
+    for (const id of [BUTTON_ID, PANEL_ID, SHEET_ID, SEARCH_ID, WRITE_ID, DICE_ID, CAL_ID]) {
         document.getElementById(id)?.remove();
     }
 
     addStyles();
     createPanel();
     updateBadge();
+    updateCalBadge();
     createButton();
     bindGlobalListeners();
     listen(document, 'input', onWriteInput, true);
