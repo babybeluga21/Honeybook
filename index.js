@@ -32,11 +32,15 @@ const WRITE_ICON = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="tr
 const QUICK_BUTTONS = [
     { id: 'dq', open: () => '"', close: () => '"', when: 'line' },
     { id: 'sq', open: () => "'", close: () => "'", when: 'line' },
+    { id: 'br', open: () => '[', close: () => ']', when: 'line' },
     { id: 'st', open: () => starText(), close: () => starText(), when: 'space', star: true }
-    // อยากได้ปุ่มเพิ่ม เอา // หน้าบรรทัดล่างออก (อย่าลืมใส่ , ต่อท้ายบรรทัดดอกจันด้านบน)
+    // ปุ่มที่ปิดไว้: เอา // หน้าบรรทัดออก (อย่าลืมใส่ , ต่อท้ายบรรทัดดอกจันด้านบน)
     // { id: 'pr', open: () => '(', close: () => ')', when: null },
     // { id: 'el', open: () => '…', close: () => '', when: null }
 ];
+
+// สัญลักษณ์ในถาดของปุ่ม ♡ (หน้าต่าง Write) แตะแล้วแทรกที่เคอร์เซอร์ — เพิ่ม/ลบ/เรียงใหม่ได้
+const QUICK_SYMBOLS = ['~', '—', '!', '?', '…', '♡', '♪', '☆'];
 
 // จำนวนผลค้นหาสูงสุดที่แสดง (เรียงจากข้อความใหม่ไปเก่า)
 const SEARCH_LIMIT = 40;
@@ -74,7 +78,7 @@ let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v19';
+const VERSION = 'v20';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -1140,23 +1144,59 @@ function addStyles() {
         color: #fff;
     }
 
-    /* ===== Write: กรอบเล็ก ปุ่มแถวเดียว ===== */
+    /* ===== Write: กรอบเตี้ย ปุ่มแถวเดียว คำอธิบายจิ๋วอยู่ขวาบน ===== */
     #${WRITE_ID} {
         width: fit-content;
-        max-width: min(270px, calc(100vw - 16px));
+        max-width: min(300px, calc(100vw - 16px));
     }
 
     #${WRITE_ID} .ltt-spk-b,
     #${WRITE_ID} .ltt-spk-c { display: none; }
 
-    #${WRITE_ID} .ltt-head { padding: 11px 0 4px 2px; }
+    /* หัว: ไม่กินพื้นที่แนวตั้งแล้ว ลอยอยู่ขวาบนบรรทัดเดียวกับป้าย WRITE */
+    #${WRITE_ID} .ltt-head {
+        position: absolute;
+        top: 2px;
+        right: 7px;
+        z-index: 3;
+        margin: 0;
+        padding: 0;
+        gap: 5px;
+        background: none;
+    }
+
+    #${WRITE_ID} .ltt-meta {
+        padding: 0;
+        overflow: visible;
+        color: rgba(246,232,226,.62);
+        font-size: 7px;
+        line-height: 1.7;
+        letter-spacing: 0;
+    }
+
+    #${WRITE_ID} .ltt-meta::before { display: none; }
+
+    #${WRITE_ID} .ltt-nav {
+        padding: 0;
+        border: 0;
+        background: none;
+    }
+
+    #${WRITE_ID} .ltt-nav .ltt-close {
+        width: 12px;
+        height: 12px;
+        margin: 0;
+        font-size: 8px;
+    }
+
+    #${WRITE_ID} .ltt-nav .ltt-close::before { display: none; }
 
     #${WRITE_ID} .ltt-row {
         flex: none;
         display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 7px 9px 9px;
+        gap: 3px;
+        padding: 11px 9px 8px;
         overflow-x: auto;
         white-space: nowrap;
         scrollbar-width: none;
@@ -1171,7 +1211,7 @@ function addStyles() {
         min-width: 24px;
         height: 22px;
         margin: 0;
-        padding: 0 6px;
+        padding: 0 5px;
         border: 1px solid rgba(246,232,226,.4) !important;
         border-radius: 5px !important;
         background: rgba(246,232,226,.09) !important;
@@ -1195,8 +1235,16 @@ function addStyles() {
         color: #fff;
     }
 
+    /* ปุ่มสัญลักษณ์กุ๊กกิ๊ก (เปิดถาดสัญลักษณ์) */
+    #${WRITE_ID} .ltt-tool.ltt-sym { color: #e0788a; }
+
+    #${WRITE_ID} .ltt-tool.ltt-open {
+        border-color: #f6e8e2 !important;
+        background: rgba(246,232,226,.3) !important;
+    }
+
     #${WRITE_ID} .ltt-name {
-        max-width: 80px;
+        max-width: 64px;
         overflow: hidden;
         text-overflow: ellipsis;
         font-size: 11.5px;
@@ -1215,7 +1263,7 @@ function addStyles() {
         flex: none;
         display: flex;
         align-items: center;
-        gap: 3px;
+        gap: 2px;
     }
 
     #${WRITE_ID} .ltt-lvl {
@@ -1231,7 +1279,7 @@ function addStyles() {
     #${WRITE_ID} .ltt-lvl button {
         -webkit-appearance: none;
         appearance: none;
-        min-width: 14px;
+        min-width: 13px;
         height: 16px;
         margin: 0;
         padding: 0;
@@ -1249,6 +1297,35 @@ function addStyles() {
         background: #f6e8e2 !important;
         color: #8f1f38;
     }
+
+    /* ถาดสัญลักษณ์ ลอยเหนือหน้าต่าง Write */
+    #${WRITE_ID} .ltt-fly {
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 16px);
+        transform: translateX(-50%);
+        box-sizing: border-box;
+        max-width: calc(100vw - 16px);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 8px;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        background: linear-gradient(170deg, #4a1428, #231826 60%, #1a1622);
+        border: 1px solid rgba(246,232,226,.55);
+        border-radius: 4px;
+        box-shadow:
+            0 8px 20px rgba(0,0,0,.5),
+            0 0 0 1px rgba(0,0,0,.35),
+            inset 0 0 0 2px #261827,
+            inset 0 0 0 3px rgba(224,120,138,.3);
+    }
+
+    #${WRITE_ID} .ltt-fly::-webkit-scrollbar { display: none; }
+    #${WRITE_ID} .ltt-fly[hidden] { display: none; }
+    #${WRITE_ID} .ltt-fly .ltt-tool { min-width: 26px; font-size: 13px; }
 
     /* ไฮไลต์ข้อความที่เลื่อนไปหา */
     .mes.ltt-flash { animation: ltt-mes-flash 2.4s ease-out; }
@@ -3017,7 +3094,16 @@ function pressButton(def) {
     }
 
     // แตะครั้งเดียว = ใส่ตัวอักษรปกติ
-    insertText(open);
+    // คู่ที่ตัวเปิด/ปิดต่างกัน เช่น [ ] : ถ้าก่อนเคอร์เซอร์ยังมีตัวเปิดค้าง ให้ใส่ตัวปิดแทน
+    let text = open;
+
+    if (close && close !== open) {
+        const before = box.value.slice(0, start);
+
+        if (before.split(open).length > before.split(close).length) text = close;
+    }
+
+    insertText(text);
     tapAt[def.id] = now;
 }
 
@@ -3102,7 +3188,7 @@ function createWriteWin() {
     const win = createWin(WRITE_ID, 'Write', '<div class="ltt-row"></div>');
     const row = win.querySelector('.ltt-row');
 
-    win.querySelector('.ltt-meta').textContent = 'แตะ 2 ครั้ง = ประกบหลังให้อัตโนมัติ';
+    win.querySelector('.ltt-meta').textContent = 'แตะ 2 ครั้ง = ประกบหลังให้';
 
     for (const def of QUICK_BUTTONS) {
         const button = makeTool(buttonLabel(def), () => pressButton(def));
@@ -3141,13 +3227,38 @@ function createWriteWin() {
         row.appendChild(group);
     }
 
+    // ปุ่มสัญลักษณ์กุ๊กกิ๊ก: เปิด/ปิดถาดที่ลอยเหนือหน้าต่าง
+    row.appendChild(makeTool('♡', () => {
+        const fly = win.querySelector('.ltt-fly');
+        setFly(Boolean(fly?.hidden));
+    }, 'ltt-sym'));
+
     row.appendChild(makeEl('span', 'ltt-sep'));
 
     const name = makeTool('', () => insertText(userName() || '{{user}}'), 'ltt-name');
     name.dataset.role = 'name';
     row.appendChild(name);
 
+    const fly = makeEl('div', 'ltt-fly');
+    fly.hidden = true;
+
+    for (const symbol of QUICK_SYMBOLS) {
+        fly.appendChild(makeTool(symbol, () => insertText(symbol)));
+    }
+
+    win.appendChild(fly);
+
     return win;
+}
+
+function setFly(open) {
+    const win = document.getElementById(WRITE_ID);
+    if (!win) return;
+
+    const fly = win.querySelector('.ltt-fly');
+    if (fly) fly.hidden = !open;
+
+    win.querySelector('.ltt-sym')?.classList.toggle('ltt-open', open);
 }
 
 function openWrite() {
@@ -3171,6 +3282,7 @@ function closeWrite() {
     if (!writeOpen) return;
 
     writeOpen = false;
+    setFly(false);
     document.getElementById(WRITE_ID)?.classList.remove('ltt-visible');
     syncOrb();
 }
