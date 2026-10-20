@@ -23,14 +23,19 @@ const SPARK = '<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColo
 const SEARCH_ICON = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="5" r="3.4"/><path d="M7.6 7.6L10.6 10.6"/></svg>';
 const WRITE_ICON = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1.5 8V6.4C1.5 4.4 2.6 3.2 4.4 2.9V4C3.6 4.3 3.2 4.9 3.2 5.6H4.6V8H1.5ZM6.9 8V6.4C6.9 4.4 8 3.2 9.8 2.9V4C9 4.3 8.6 4.9 8.6 5.6H10V8H6.9Z"/></svg>';
 
-// เครื่องหมายที่เป็นปุ่มกดในหน้าต่าง Write — เพิ่ม/ลบ/แก้ได้ที่นี่
-// open = ตัวเปิด, close = ตัวปิด (เว้นว่างได้ ถ้าเป็นตัวเดี่ยว เช่น …)
-const QUICK_PAIRS = [
-    { open: '"', close: '"' },
-    { open: "'", close: "'" },
-    { open: '*', close: '*' },
-    { open: '(', close: ')' },
-    { open: '…', close: '' }
+// ปุ่มในหน้าต่าง Write (เรียงซ้าย → ขวา) เพิ่ม/ลบ/แก้ได้ที่นี่
+//   open / close : ตัวเปิด / ตัวปิด (close เว้นว่างได้ ถ้าเป็นตัวเดี่ยว)
+//   when         : 'line' = แตะ 2 ครั้งแล้วประกบตอนเว้นบรรทัด
+//                  'space' = แตะ 2 ครั้งแล้วประกบตอนเว้นวรรค
+//                  null = แทรกเลย ไม่มีระบบประกบ
+//   star         : ปุ่มดอกจัน (มีตัวเลือก 1/2/3 ดอกข้างปุ่ม)
+const QUICK_BUTTONS = [
+    { id: 'dq', open: () => '"', close: () => '"', when: 'line' },
+    { id: 'sq', open: () => "'", close: () => "'", when: 'line' },
+    { id: 'st', open: () => starText(), close: () => starText(), when: 'space', star: true }
+    // อยากได้ปุ่มเพิ่ม เอา // หน้าบรรทัดล่างออก (อย่าลืมใส่ , ต่อท้ายบรรทัดดอกจันด้านบน)
+    // { id: 'pr', open: () => '(', close: () => ')', when: null },
+    // { id: 'el', open: () => '…', close: () => '', when: null }
 ];
 
 // จำนวนผลค้นหาสูงสุดที่แสดง (เรียงจากข้อความใหม่ไปเก่า)
@@ -69,7 +74,7 @@ let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v18';
+const VERSION = 'v19';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -96,6 +101,7 @@ function dispose() {
     sheetOpen = false;
     searchOpen = false;
     writeOpen = false;
+    armed = [];
 }
 
 function addStyles() {
@@ -1134,57 +1140,114 @@ function addStyles() {
         color: #fff;
     }
 
-    ${WINS} .ltt-sec {
-        margin: 2px 2px 6px;
-        color: #e0788a;
-        font-size: 10px;
-        line-height: 1.8;
-        letter-spacing: .3px;
+    /* ===== Write: กรอบเล็ก ปุ่มแถวเดียว ===== */
+    #${WRITE_ID} {
+        width: fit-content;
+        max-width: min(270px, calc(100vw - 16px));
     }
 
-    ${WINS} .ltt-sec span { color: #9d8c95; }
+    #${WRITE_ID} .ltt-spk-b,
+    #${WRITE_ID} .ltt-spk-c { display: none; }
 
-    ${WINS} .ltt-tools {
+    #${WRITE_ID} .ltt-head { padding: 11px 0 4px 2px; }
+
+    #${WRITE_ID} .ltt-row {
+        flex: none;
         display: flex;
-        flex-wrap: wrap;
         align-items: center;
-        gap: 6px;
-        margin-bottom: 8px;
+        gap: 4px;
+        padding: 7px 9px 9px;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
     }
 
-    ${WINS} .ltt-tool {
+    #${WRITE_ID} .ltt-row::-webkit-scrollbar { display: none; }
+
+    #${WRITE_ID} .ltt-tool {
         -webkit-appearance: none;
         appearance: none;
-        min-width: 38px;
-        height: 28px;
+        flex: none;
+        min-width: 24px;
+        height: 22px;
         margin: 0;
-        padding: 0 10px;
+        padding: 0 6px;
         border: 1px solid rgba(246,232,226,.4) !important;
-        border-radius: 6px !important;
+        border-radius: 5px !important;
         background: rgba(246,232,226,.09) !important;
         box-shadow: none !important;
         color: #f6e8e2;
         font-family: inherit;
-        font-size: 13px;
+        font-size: 12px;
         line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background .15s ease, border-color .15s ease;
+    }
+
+    #${WRITE_ID} .ltt-tool:active { background: rgba(246,232,226,.28) !important; }
+
+    /* แตะ 2 ครั้งแล้ว รอประกบตัวปิด */
+    #${WRITE_ID} .ltt-tool.ltt-on {
+        border-color: #f6e8e2 !important;
+        background: #c42b48 !important;
+        box-shadow: 0 0 0 1px rgba(246,232,226,.25) !important;
+        color: #fff;
+    }
+
+    #${WRITE_ID} .ltt-name {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 11.5px;
+    }
+
+    #${WRITE_ID} .ltt-sep {
+        flex: none;
+        width: 1px;
+        height: 14px;
+        margin: 0 1px;
+        background: rgba(224,120,138,.5);
+    }
+
+    /* ตัวเลือกจำนวนดอกจัน 1 / 2 / 3 */
+    #${WRITE_ID} .ltt-grp {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+
+    #${WRITE_ID} .ltt-lvl {
+        display: flex;
+        height: 22px;
+        box-sizing: border-box;
+        padding: 2px;
+        border: 1px solid rgba(224,120,138,.55);
+        border-radius: 11px;
+        background: rgba(10,8,16,.4);
+    }
+
+    #${WRITE_ID} .ltt-lvl button {
+        -webkit-appearance: none;
+        appearance: none;
+        min-width: 14px;
+        height: 16px;
+        margin: 0;
+        padding: 0;
+        border: 0 !important;
+        border-radius: 8px !important;
+        background: none !important;
+        box-shadow: none !important;
+        color: #d9a9b3;
+        font: 700 9.5px 'Courier New', monospace;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
     }
 
-    ${WINS} .ltt-tool:active { background: rgba(246,232,226,.28) !important; }
-
-    ${WINS} .ltt-tool.ltt-wide {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 12px;
-    }
-
-    ${WINS} .ltt-tool-tag {
-        color: #e0788a;
-        font-size: 9.5px;
-        letter-spacing: .3px;
+    #${WRITE_ID} .ltt-lvl button.ltt-sel {
+        background: #f6e8e2 !important;
+        color: #8f1f38;
     }
 
     /* ไฮไลต์ข้อความที่เลื่อนไปหา */
@@ -1563,7 +1626,8 @@ function bindGlobalListeners() {
             return;
         }
 
-        closeAllWins();
+        // Write เป็นตัวช่วยพิมพ์: แตะกล่องข้อความ/ที่อื่นระหว่างพิมพ์ต้องไม่ปิด (ปิดด้วย ✕ หรือแตะลูกแก้ว)
+        if (!writeOpen) closeAllWins();
         if (panelOpen) closePanel();
     });
 
@@ -2815,38 +2879,210 @@ function toggleSearch() {
 
 /* ---------- Write: ปุ่มแทรกเครื่องหมาย + ชื่อผู้ใช้ ---------- */
 
+const DOUBLE_MS = 350;
+const STAR_KEY = `${EXT_ID}-star-level`;
+const tapAt = {};
+
+let starLevel = loadStarLevel();
+let armed = [];        // ปุ่มที่แตะ 2 ครั้งแล้ว รอประกบตัวปิด: { id, close, when }
+let prevValue = '';
+let writeBusy = false;
+
+function loadStarLevel() {
+    try {
+        const n = Number(localStorage.getItem(STAR_KEY));
+        return n >= 1 && n <= 3 ? n : 2;
+    } catch {
+        return 2;
+    }
+}
+
+function starText() {
+    return '*'.repeat(starLevel);
+}
+
 function userName() {
     const name = getCtx()?.name1;
     return name && String(name).trim() ? String(name).trim() : '';
 }
 
-// แทรกที่ตำแหน่งเคอร์เซอร์ ถ้ามีข้อความที่เลือกไว้จะครอบให้ แล้ววางเคอร์เซอร์ไว้ตรงกลางคู่
-function insertAtCursor(open, close = '') {
-    const box = document.querySelector('#send_textarea') || findTextbox();
+function getBox() {
+    return document.querySelector('#send_textarea') || findTextbox();
+}
+
+function buttonLabel(def) {
+    const close = def.close();
+    return close ? `${def.open()} ${close}` : def.open();
+}
+
+// ส่ง input ให้ SillyTavern รู้ว่าข้อความเปลี่ยน (ปรับความสูง/เก็บฉบับร่าง) โดยไม่วนกลับเข้าตัวประกบ
+function commitBox(box) {
+    prevValue = box.value;
+    writeBusy = true;
+
+    try {
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+    } finally {
+        writeBusy = false;
+    }
+}
+
+// แทรกที่เคอร์เซอร์ ไม่เรียก focus() เพื่อไม่ให้คีย์บอร์ดเด้งขึ้น/ลง และหน้าต่างไม่ขยับ
+function insertText(text, caretOffset) {
+    const box = getBox();
 
     if (!box || typeof box.value !== 'string') {
         showToast('✖ หากล่องข้อความไม่เจอ');
         return;
     }
 
-    const value = box.value;
-    const start = box.selectionStart ?? value.length;
+    const start = box.selectionStart ?? box.value.length;
     const end = box.selectionEnd ?? start;
-    const selected = value.slice(start, end);
 
-    box.value = value.slice(0, start) + open + selected + close + value.slice(end);
+    box.value = box.value.slice(0, start) + text + box.value.slice(end);
 
-    const caret = selected
-        ? start + open.length + selected.length + close.length
-        : start + open.length;
-
+    const caret = start + (caretOffset ?? text.length);
     box.setSelectionRange(caret, caret);
-    box.dispatchEvent(new Event('input', { bubbles: true }));
-    box.focus({ preventScroll: true });
+
+    commitBox(box);
 }
 
-function makeTool(label, onClick) {
-    const button = makeEl('button', 'ltt-tool', label);
+function syncWrite() {
+    const win = document.getElementById(WRITE_ID);
+    if (!win) return;
+
+    for (const def of QUICK_BUTTONS) {
+        const button = win.querySelector(`[data-btn="${def.id}"]`);
+        if (!button) continue;
+
+        button.classList.toggle('ltt-on', armed.some(item => item.id === def.id));
+        button.textContent = buttonLabel(def);
+    }
+
+    win.querySelectorAll('.ltt-lvl button').forEach(button => {
+        button.classList.toggle('ltt-sel', Number(button.dataset.n) === starLevel);
+    });
+}
+
+function pressButton(def) {
+    const box = getBox();
+    if (!box || typeof box.value !== 'string') return;
+
+    const open = def.open();
+    const close = def.close();
+    const start = box.selectionStart ?? box.value.length;
+    const end = box.selectionEnd ?? start;
+
+    // เลือกข้อความไว้ → ครอบให้ทันที
+    if (end > start && close) {
+        const v = box.value;
+        box.value = v.slice(0, start) + open + v.slice(start, end) + close + v.slice(end);
+
+        const caret = end + open.length + close.length;
+        box.setSelectionRange(caret, caret);
+        commitBox(box);
+
+        return;
+    }
+
+    // แทรกเลย (ไม่มีระบบประกบ)
+    if (!def.when) {
+        if (close) insertText(open + close, open.length);
+        else insertText(open);
+
+        return;
+    }
+
+    // กดปุ่มสีแดงซ้ำ = ปิดทันที
+    const index = armed.findIndex(item => item.id === def.id);
+
+    if (index >= 0) {
+        insertText(armed[index].close);
+        armed.splice(index, 1);
+        tapAt[def.id] = 0;
+        syncWrite();
+
+        return;
+    }
+
+    const now = Date.now();
+
+    // แตะ 2 ครั้งติดกัน = รอประกบ (ตัวเปิดใส่ไปแล้วตอนแตะครั้งแรก)
+    if (now - (tapAt[def.id] || 0) < DOUBLE_MS) {
+        armed.push({ id: def.id, close, when: def.when });
+        tapAt[def.id] = 0;
+        syncWrite();
+
+        return;
+    }
+
+    // แตะครั้งเดียว = ใส่ตัวอักษรปกติ
+    insertText(open);
+    tapAt[def.id] = now;
+}
+
+// ประกบตัวปิดให้หลังผู้ใช้เว้นบรรทัด/เว้นวรรค
+// ตรวจหลังพิมพ์ (ไม่ใช่ก่อน) เพราะคีย์บอร์ดมือถือหลายตัวยกเลิก event ก่อนพิมพ์ไม่ได้
+function onWriteInput(event) {
+    const box = event.target;
+
+    if (writeBusy || box?.id !== 'send_textarea') return;
+
+    const value = box.value;
+    const caret = box.selectionStart ?? value.length;
+
+    if (!value) {
+        if (armed.length) {
+            armed = [];
+            syncWrite();
+        }
+
+        prevValue = value;
+        return;
+    }
+
+    let typed = '';
+
+    if (!event.isComposing && caret > 0) {
+        if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') typed = '\n';
+        else if (event.inputType === 'insertText' && event.data === ' ') typed = ' ';
+        else if (value.length === prevValue.length + 1) typed = value[caret - 1];
+
+        if (typed && value[caret - 1] !== typed) typed = '';
+    }
+
+    if (armed.length && (typed === '\n' || typed === ' ')) {
+        // เว้นบรรทัด = ปิดทุกตัวที่ค้างแล้วรีเซ็ต / เว้นวรรค = ปิดเฉพาะดอกจัน
+        const hit = typed === '\n' ? armed.slice() : armed.filter(item => item.when === 'space');
+
+        if (hit.length) {
+            const at = caret - 1;
+            const before = value.slice(0, at);
+            let tail = '';
+
+            // ผู้ใช้พิมพ์ตัวปิดเองไว้แล้ว ก็ไม่ใส่ซ้ำ
+            [...hit].reverse().forEach(item => {
+                if (item.close && !(before + tail).endsWith(item.close)) tail += item.close;
+            });
+
+            box.value = before + tail + value.slice(at);
+
+            const next = at + tail.length + 1;
+            box.setSelectionRange(next, next);
+
+            armed = typed === '\n' ? [] : armed.filter(item => item.when !== 'space');
+            syncWrite();
+            commitBox(box);
+
+            return;
+        }
+    }
+
+    prevValue = box.value;
+}
+
+function makeTool(label, onClick, className) {
+    const button = makeEl('button', className ? `ltt-tool ${className}` : 'ltt-tool', label);
     button.type = 'button';
 
     // ไม่ให้ปุ่มแย่งโฟกัสจากกล่องข้อความ (คีย์บอร์ดจะได้ไม่ปิด และเคอร์เซอร์ไม่หาย)
@@ -2863,38 +3099,55 @@ function createWriteWin() {
     const existing = document.getElementById(WRITE_ID);
     if (existing) return existing;
 
-    const win = createWin(WRITE_ID, 'Write', `
-        <div class="ltt-list">
-            <div class="ltt-sec">เครื่องหมาย <span>· เลือกข้อความไว้จะครอบให้</span></div>
-            <div class="ltt-tools ltt-pairs"></div>
-            <div class="ltt-sec">ชื่อ</div>
-            <div class="ltt-tools ltt-names"></div>
-        </div>
-    `);
+    const win = createWin(WRITE_ID, 'Write', '<div class="ltt-row"></div>');
+    const row = win.querySelector('.ltt-row');
 
-    const pairs = win.querySelector('.ltt-pairs');
+    win.querySelector('.ltt-meta').textContent = 'แตะ 2 ครั้ง = ประกบหลังให้อัตโนมัติ';
 
-    for (const pair of QUICK_PAIRS) {
-        const label = pair.close ? `${pair.open} ${pair.close}` : pair.open;
-        pairs.appendChild(makeTool(label, () => insertAtCursor(pair.open, pair.close)));
+    for (const def of QUICK_BUTTONS) {
+        const button = makeTool(buttonLabel(def), () => pressButton(def));
+        button.dataset.btn = def.id;
+
+        if (!def.star) {
+            row.appendChild(button);
+            continue;
+        }
+
+        // ดอกจัน + ตัวเลือก 1 / 2 / 3 ดอก
+        const group = makeEl('span', 'ltt-grp');
+        const level = makeEl('span', 'ltt-lvl');
+
+        for (const n of [1, 2, 3]) {
+            const choice = makeEl('button', '', String(n));
+            choice.type = 'button';
+            choice.dataset.n = String(n);
+            choice.setAttribute('aria-label', `${n} ดอกจัน`);
+
+            choice.addEventListener('mousedown', event => event.preventDefault());
+            choice.addEventListener('click', event => {
+                event.stopPropagation();
+                starLevel = n;
+
+                try { localStorage.setItem(STAR_KEY, String(n)); } catch { /* ข้าม */ }
+
+                syncWrite();
+            });
+
+            level.appendChild(choice);
+        }
+
+        group.appendChild(button);
+        group.appendChild(level);
+        row.appendChild(group);
     }
 
-    win.querySelector('.ltt-meta').textContent = 'ตัวช่วยพิมพ์';
+    row.appendChild(makeEl('span', 'ltt-sep'));
+
+    const name = makeTool('', () => insertText(userName() || '{{user}}'), 'ltt-name');
+    name.dataset.role = 'name';
+    row.appendChild(name);
 
     return win;
-}
-
-// ชื่อผู้ใช้เปลี่ยนได้ (เปลี่ยน persona) จึงสร้างปุ่มชื่อใหม่ทุกครั้งที่เปิด
-function refreshNames(win) {
-    const names = win.querySelector('.ltt-names');
-    names.textContent = '';
-
-    const name = userName();
-    const button = makeTool(name || '{{user}}', () => insertAtCursor(name || '{{user}}'));
-    button.classList.add('ltt-wide');
-
-    names.appendChild(makeEl('span', 'ltt-tool-tag', 'ผู้ใช้'));
-    names.appendChild(button);
 }
 
 function openWrite() {
@@ -2907,7 +3160,10 @@ function openWrite() {
     win.classList.add('ltt-visible');
     syncOrb();
 
-    refreshNames(win);
+    // ชื่อผู้ใช้เปลี่ยนได้ (เปลี่ยน persona) จึงอัปเดตป้ายทุกครั้งที่เปิด
+    win.querySelector('[data-role="name"]').textContent = userName() || '{{user}}';
+
+    syncWrite();
     positionWin(win);
 }
 
@@ -2957,6 +3213,7 @@ export async function init() {
     updateBadge();
     createButton();
     bindGlobalListeners();
+    listen(document, 'input', onWriteInput, true);
     startPositionObserver();
 
     cleanups.push(() => clearTimeout(hookTimer));
