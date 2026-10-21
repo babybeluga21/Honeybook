@@ -1499,6 +1499,8 @@ function addStyles() {
     #${CAL_ID} .ltt-book { max-width: none; }
     #${CAL_ID} .ltt-card-top { flex-wrap: wrap; }
     #${CAL_ID} .ltt-card.ltt-past { opacity: .6; }
+    #${CAL_ID} .ltt-snip-tap { cursor: pointer; }
+    #${CAL_ID} .ltt-snip-full { opacity: .75; font-style: italic; }
 
     #${CAL_ID} .ltt-card.ltt-cal-edit {
         display: flex;
@@ -3685,8 +3687,8 @@ function tableRollText(table) {
 
 // คำที่ทำให้ประโยคน่าจะเป็น "นัด/กิจกรรม" เพิ่ม/ลบได้
 const CAL_KEYWORDS = [
-    'นัด', 'งาน', 'ประชุม', 'เจอกัน', 'พบกัน', 'เดท', 'สอบ', 'แข่ง', 'เทศกาล', 'วันเกิด',
-    'กำหนด', 'เดินทาง', 'ออกเดินทาง', 'เลื่อน', 'จอง', 'ภารกิจ', 'ปาร์ตี้', 'ไปเที่ยว',
+    'นัดหมาย', 'นัดกัน', 'งานเลี้ยง', 'นัด', 'งาน', 'ประชุม', 'เจอกัน', 'พบกัน', 'เดท', 'สอบ', 'แข่ง', 'เทศกาล', 'วันเกิด',
+    'ส่งงาน', 'กำหนด', 'เดินทาง', 'ออกเดินทาง', 'เลื่อน', 'จอง', 'ภารกิจ', 'ปาร์ตี้', 'ไปเที่ยว',
     'พิธี', 'กิจกรรม', 'ฉลอง', 'แต่งงาน'
 ];
 
@@ -4047,7 +4049,7 @@ function findDateHits(text, base) {
             if (r.end > b) b = r.end;
 
             used.push([a, b]);
-            hits.push({ index: a, end: b, matched: text.slice(a, b), date: r.date, weak: Boolean(r.weak), approx: Boolean(r.approx) });
+            hits.push({ index: a, end: b, matched: text.slice(a, b), date: r.date, weak: Boolean(r.weak), approx: Boolean(r.approx), festival: Boolean(r.festival) });
         }
     };
 
@@ -4103,7 +4105,7 @@ function findDateHits(text, base) {
         if (!fest) return null;
 
         const date = nextAnnual(anchor, fest.m, fest.d);
-        return date ? { date, approx: fest.approx } : null;
+        return date ? { date, approx: fest.approx, festival: true } : null;
     });
 
     // ที่เหลือต้องอิงวันนี้ในเรื่อง
@@ -4154,16 +4156,332 @@ function windowOf(text, a, b) {
     return text.slice(Math.max(0, a - 30), Math.min(text.length, b + 45));
 }
 
-function makeTitle(text, a, b) {
+// ข้อความรอบ ๆ วันที่ (ดิบ) เก็บไว้ให้แตะดูของเต็มได้
+function makeContext(text, a, b) {
     const start = Math.max(0, a - 24);
     const end = Math.min(text.length, b + 40);
 
-    let title = text.slice(start, end).replace(/\s+/g, ' ').replace(/^[\s,.:;"'“”‘’()[\]*_~-]+/, '').trim();
+    let ctx = text.slice(start, end).replace(/\s+/g, ' ').trim();
 
-    if (start > 0) title = `…${title}`;
-    if (end < text.length) title = `${title}…`;
+    if (start > 0) ctx = `…${ctx}`;
+    if (end < text.length) ctx = `${ctx}…`;
 
-    return title;
+    return ctx;
+}
+
+const TITLE_MAX = 36;
+const TITLE_EDGE = /^[\s,.:;"'“”‘’()[\]*_~\-…]+|[\s,.:;"'“”‘’()[\]*_~\-…]+$/g;
+const TITLE_FILLER = /^(?:ต่อให้|ถึงแม้|เพราะ|แต่|และ|แล้ว|ก็|ที่|จะ|ว่า|ซึ่ง|โดย|ใน|ณ)\s*/;
+const TITLE_BREAK = /[\n\r"“”‘’()[\]{}<>!?;…,]|\.(?:\s|$|\.)/;
+
+function tidyTitle(text) {
+    let t = text.replace(/\s+/g, ' ').replace(TITLE_EDGE, '');
+
+    for (let i = 0; i < 3; i++) {
+        const next = t.replace(TITLE_FILLER, '');
+        if (next === t) break;
+        t = next;
+    }
+
+    return t.replace(TITLE_EDGE, '');
+}
+
+function shortenTitle(t) {
+    if (t.length <= TITLE_MAX) return t;
+
+    // ตัดตามขอบคำ: ใช้ตัวแบ่งคำภาษาไทยของเบราว์เซอร์ (Intl.Segmenter) ถ้าไม่มีก็ตัดตรงช่องว่าง
+    try {
+        if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+            let out = '';
+
+            for (const { segment } of new Intl.Segmenter('th', { granularity: 'word' }).segment(t)) {
+                if ((out + segment).length > TITLE_MAX) break;
+                out += segment;
+            }
+
+            out = out.replace(TITLE_EDGE, '');
+            if (out.length >= 8) return `${out}…`;
+        }
+    } catch { /* ใช้วิธีสำรองด้านล่าง */ }
+
+    const cut = t.lastIndexOf(' ', TITLE_MAX);
+
+    return `${cut >= 12 ? t.slice(0, cut) : t.slice(0, TITLE_MAX)}…`;
+}
+
+// ประโยคสมมติ/ปฏิเสธ/ยกเลิก: "ต่อให้พรุ่งนี้จะมีประชุม…" "ถ้าพรุ่งนี้ว่าง" "ยกเลิกนัดแล้ว" ไม่ใช่นัดจริง
+const CAL_DOUBT = /ต่อให้|ถึงแม้|แม้ว่า|แม้จะ|ถ้า|หาก|สมมติ|ยกเลิก|ไม่มี(?:นัด|ประชุม|งาน|เรียน)|ไม่ได้(?:นัด|ไป)|ไม่เคย|ไม่ต้อง/;
+
+// คำที่บอกว่าประโยคเปลี่ยนเรื่อง/เปลี่ยนประธาน ชื่อรายการหยุดก่อนคำเหล่านี้
+const TITLE_CONNECTORS = new Set(['เขา', 'เธอ', 'ผม', 'ฉัน', 'เรา', 'มัน', 'แต่', 'เพราะ', 'ดังนั้น', 'จึง', 'ก็', 'แล้ว', 'ซึ่ง', 'จน']);
+// ...ยกเว้นเมื่อเป็นผู้ร่วมนัด เช่น "นัดกับเรา" "ให้ผม"
+const TITLE_OBJECT_PREFIX = new Set(['กับ', 'ให้', 'แก่', 'ถึง', 'หา', 'พา', 'ตาม']);
+
+function hasDoubt(text, a, b) {
+    const breaker = new RegExp(TITLE_BREAK.source, 'g');
+    const left = text.slice(Math.max(0, a - 40), a);
+    const right = text.slice(b, b + 40);
+
+    let leftCut = 0;
+    for (const m of left.matchAll(breaker)) leftCut = m.index + m[0].length;
+
+    const rightBrk = right.search(TITLE_BREAK);
+
+    return CAL_DOUBT.test(left.slice(leftCut) + (rightBrk >= 0 ? right.slice(0, rightBrk) : right));
+}
+
+function cutAtConnector(t) {
+    try {
+        if (typeof Intl === 'undefined' || !Intl.Segmenter) return t;
+
+        let out = '';
+        let prev = '';
+
+        for (const { segment } of new Intl.Segmenter('th', { granularity: 'word' }).segment(t)) {
+            const word = segment.trim();
+
+            if (word && out.replace(/\s/g, '').length >= 4 && TITLE_CONNECTORS.has(word) && !TITLE_OBJECT_PREFIX.has(prev)) break;
+
+            out += segment;
+            if (word) prev = word;
+        }
+
+        return out;
+    } catch {
+        return t;
+    }
+}
+
+// ตัวแบ่งคำภาษาไทยของเบราว์เซอร์ (ไม่มีก็คืน null แล้วใช้วิธีสำรอง)
+let thSegmenter;
+
+function thWords(text) {
+    try {
+        if (thSegmenter === undefined) {
+            thSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'word' }) : null;
+        }
+
+        return thSegmenter ? [...thSegmenter.segment(text)].map(item => item.segment) : null;
+    } catch {
+        return null;
+    }
+}
+
+// ตัดให้ไม่เกิน max ตัวอักษร ตามขอบคำ
+function clipWords(text, max) {
+    if (text.length <= max) return text;
+
+    const words = thWords(text);
+
+    if (!words) return `${text.slice(0, max)}…`;
+
+    let out = '';
+
+    for (const word of words) {
+        if ((out + word).length > max) break;
+        out += word;
+    }
+
+    return `${(out || text.slice(0, max)).replace(TITLE_EDGE, '')}…`;
+}
+
+// หาคำบริบท (ประชุม/นัด/งาน…) ที่ใกล้วันที่ที่สุด คำที่ซ้อนกันยึดตัวที่เริ่มก่อน/ยาวกว่า (ส่งงาน ไม่ใช่ งาน)
+function findKeyword(text, a, b) {
+    const lo = Math.max(0, a - 30);
+    const around = text.slice(lo, Math.min(text.length, b + 45));
+    const found = [];
+
+    for (const word of CAL_KEYWORDS) {
+        let at = around.indexOf(word);
+
+        while (at >= 0) {
+            found.push({ word, start: lo + at, end: lo + at + word.length });
+            at = around.indexOf(word, at + 1);
+        }
+    }
+
+    if (!found.length) return null;
+
+    found.sort((x, y) => Math.abs(x.start - a) - Math.abs(y.start - a) || (y.end - y.start) - (x.end - x.start));
+
+    let best = found[0];
+
+    for (const item of found) {
+        if (item.start < best.start && item.end > best.start) best = item;
+    }
+
+    return best;
+}
+
+/* ---------- แยก "กับใคร" / "ที่ไหน" / "อะไร" ---------- */
+
+const CAL_PLACES = [
+    'มหาวิทยาลัย', 'โรงพยาบาล', 'กองบัญชาการ', 'ห้องประชุม', 'ห้องทดลอง', 'สถานีตำรวจ', 'โรงเรียน', 'โรงแรม',
+    'โรงละคร', 'โรงงาน', 'สนามบิน', 'ร้านกาแฟ', 'ภัตตาคาร', 'สำนักงาน', 'หอประชุม', 'ปราสาท', 'ออฟฟิศ',
+    'ท่าเรือ', 'สถานี', 'โบสถ์', 'คาเฟ่', 'ตลาด', 'ห้อง', 'ร้าน', 'บ้าน', 'วัง', 'วัด', 'สนาม', 'สวน', 'ห้าง', 'ฐาน', 'ค่าย', 'ศาล'
+];
+
+const RE_PLACE = new RegExp(`(?:ที่|ณ|ใน|ยัง)\\s*(${CAL_PLACES.map(escRe).join('|')})(\\s*\\d{1,4})?`);
+const PLACE_TAIL_STOP = new Set(['ตอน', 'เวลา', 'วัน', 'แล้ว', 'นะ', 'ครับ', 'ค่ะ', 'ด้วย', 'เพื่อ', 'และ', 'กับ', 'ก็', 'จะ', 'ที่', 'ใน', 'ของ', 'เมื่อ', 'ซึ่ง', 'แต่', 'เขา', 'เธอ', 'ฉัน', 'ผม', 'เรา']);
+const WHO_STOP = new Set(['กัน', 'ที่', 'ใคร', 'อะไร', 'ใน', 'แล้ว', 'นะ', 'ด้วย', 'ว่า', 'การ', 'ความ', 'เรื่อง', 'สิ่ง', 'ฝ่าย', 'ตัวเอง']);
+const WHO_TITLES = new Set(['ท่าน', 'คุณ', 'พี่', 'น้อง', 'ลุง', 'ป้า', 'น้า', 'ครู', 'อาจารย์', 'หมอ', 'นาย', 'นาง', 'เจ้า', 'พ่อ', 'แม่', 'หัวหน้า', 'ผู้', 'องค์']);
+const WHO_SKIP_BEFORE = /(?:เกี่ยว|เหมือน|เท่า|เทียบ|ตรง|ขัด|สอดคล้อง)$/;
+const OBJ_FILLER = /^(?:(?:อะไร|ใดๆ|ใด|บ้าง|หน่อย|นี้|นั้น|อยู่)\s*|(?:ซึ่ง|ว่า|ที่|จะ|ก็|แล้ว|นะ|ครับ|ค่ะ|คือ|เป็น|มี|ไว้)(?:\s+|$))/;
+const OBJ_STOP = /^(?:เขา|เธอ|ฉัน|ผม|เรา|มัน|แต่|แล้ว|และ|ก็|ซึ่ง|เพราะ|จึง|ดังนั้น|ตอน|เวลา|นะ|ครับ|ค่ะ|ด้วย|ที่|กับ|จะ)/;
+
+// "กับคีริน" (ชื่อที่ SillyTavern รู้แม่นสุด) หรือ "กับเพื่อน" (คำแรกหลัง กับ)
+function findWho(zone, names) {
+    const known = [...names].sort((x, y) => y.length - x.length);
+
+    for (const name of known) {
+        const m = zone.match(new RegExp(`(?:กับ|พบ|เจอ|หา)\\s*(${escRe(name)})`, 'i'));
+        if (m) return { text: m[1], raw: m[0] };
+    }
+
+    const re = /กับ\s*([ก-๙A-Za-z][ก-๙A-Za-z0-9]*)/g;
+    let m;
+
+    while ((m = re.exec(zone))) {
+        if (WHO_SKIP_BEFORE.test(zone.slice(Math.max(0, m.index - 6), m.index))) continue;
+
+        const words = thWords(m[1]);
+        let first = words ? words[0] : m[1].slice(0, 8);
+
+        if (!first || first.length < 2 || WHO_STOP.has(first)) continue;
+
+        // คำนำหน้าชื่อ (ท่าน/คุณ/พี่…) ติดกับคำถัดไปเป็นชื่อเดียว เช่น "ท่านผู้การ"
+        if (words && WHO_TITLES.has(first)) {
+            for (let i = 1; i < words.length && i <= 2; i++) {
+                const next = words[i];
+
+                if (!/^[ก-๙A-Za-z0-9]+$/.test(next) || PLACE_TAIL_STOP.has(next) || (first + next).length > 16) break;
+                if (WHO_STOP.has(next) && words[i - 1] !== 'ผู้') break;
+
+                first += next;
+            }
+        }
+
+        return { text: first, raw: m[0].slice(0, m[0].length - m[1].length + first.length) };
+    }
+
+    return null;
+}
+
+// "ที่ห้อง 304" / "ที่โรงพยาบาลกลางเมือง": คำสถานที่ + เลขห้อง หรืออีกไม่เกิน 2 คำที่ติดกัน
+function findWhere(zone) {
+    const m = RE_PLACE.exec(zone);
+    if (!m) return null;
+
+    let text = m[1];
+    let end = m.index + m[0].length;
+
+    if (m[2]) {
+        text += m[2].replace(/\s+/g, ' ');
+    } else {
+        let taken = 0;
+        let tail = '';
+
+        for (const word of thWords(zone.slice(end)) || []) {
+            if (!/^[ก-๙A-Za-z0-9]+$/.test(word) || PLACE_TAIL_STOP.has(word) || taken >= 2 || (tail + word).length > 12) break;
+
+            tail += word;
+            taken += 1;
+        }
+
+        text += tail;
+        end += tail.length;
+    }
+
+    return { text, raw: zone.slice(m.index, end) };
+}
+
+function tidyObject(rest) {
+    let t = rest.replace(/\s+/g, ' ').trim();
+
+    for (let i = 0; i < 4; i++) {
+        const next = t.replace(OBJ_FILLER, '');
+        if (next === t) break;
+        t = next;
+    }
+
+    const chunks = t.split(' ').filter(Boolean);
+
+    if (!chunks.length || OBJ_STOP.test(chunks[0])) return '';
+
+    let out = chunks[0];
+
+    if (out.length <= 6 && chunks[1] && !OBJ_STOP.test(chunks[1])) out += ` ${chunks[1]}`;
+
+    return clipWords(out.replace(TITLE_EDGE, ''), 18);
+}
+
+/*
+ * สรุปแบบ "อะไร · กับใคร · ที่ไหน" เช่น "ประชุมของกองทัพ · กับคีริน · ที่ห้อง 304"
+ * คืน '' ถ้าสรุปไม่ได้ (ไม่มีคำบริบท หรือไม่มีอะไรเพิ่มจากตัวคำ) ให้ผู้เรียกใช้ชื่อสำรองแทน
+ */
+function summarizeEvent(text, a, b, names, festival) {
+    const matched = text.slice(a, b);
+    const kw = festival ? null : findKeyword(text, a, b);
+
+    if (!kw && !festival) return '';
+
+    const from = kw ? kw.start : a;
+    const lo = Math.max(0, from - 20);
+    const zone = text.slice(lo, Math.min(text.length, (kw ? kw.end : b) + 70)).replace(matched, ' ');
+    const who = findWho(zone, names);
+    const where = findWhere(zone);
+
+    let what = matched;
+
+    if (kw) {
+        let rest = text.slice(kw.end, kw.end + 70).replace(matched, ' ');
+
+        for (const part of [who?.raw, where?.raw]) {
+            if (part) rest = rest.replace(part, ' ');
+        }
+
+        const brk = rest.search(TITLE_BREAK);
+        const object = tidyObject(brk >= 0 ? rest.slice(0, brk) : rest);
+
+        what = kw.word + (/^[A-Za-z0-9]/.test(object) ? ' ' : '') + object;
+    }
+
+    const parts = [what];
+
+    if (who) parts.push(`กับ${who.text}`);
+    if (where) parts.push(`ที่${where.text}`);
+
+    if (kw && parts.length === 1 && what === kw.word) return '';
+
+    return parts.join(' · ');
+}
+
+/*
+ * ชื่อรายการแบบสรุปสั้น ๆ (ไม่เรียก AI):
+ *   - ถ้ามีคำบริบท (ประชุม/นัด/งาน…) ใกล้วันที่ เริ่มอ่านจากคำนั้น ไม่งั้นเริ่มหลังวันที่
+ *   - ตัดตัววันที่ออก (ซ้ำกับป้ายวันที่) ตัดคำเชื่อมนำหน้า หยุดที่เครื่องหมาย/เครื่องหมายคำพูด
+ *   - ยาวเกินตัดตรงช่องว่าง ถ้าได้สั้นเกินไปใช้วลีก่อนหน้าวันที่แทน
+ */
+function makeTitle(text, a, b) {
+    const matched = text.slice(a, b);
+    const kw = findKeyword(text, a, b);
+    const from = kw ? kw.start : b;
+
+    // ลบตัววันที่ออกก่อนหาจุดตัด (ไม่งั้นจุดใน "ม.ค." จะถูกนับเป็นจบประโยค)
+    const forward = text.slice(from).replace(matched, ' ');
+    const brk = forward.search(TITLE_BREAK);
+    let title = tidyTitle(cutAtConnector(brk >= 0 ? forward.slice(0, brk) : forward));
+
+    if (title.length < 6) {
+        const head = text.slice(Math.max(0, a - TITLE_MAX * 2), a);
+        const cut = Math.max(...[...head.matchAll(new RegExp(TITLE_BREAK.source, 'g'))].map(m => m.index + m[0].length), 0);
+
+        title = tidyTitle(head.slice(cut)).slice(-TITLE_MAX);
+    }
+
+    if (title.length < 3) title = tidyTitle(makeContext(text, a, b));
+
+    return shortenTitle(title);
 }
 
 function nearestTime(times, a, b) {
@@ -4184,9 +4502,10 @@ function nearestTime(times, a, b) {
 
 /*
  * จับรายการนัดหมายจากข้อความเดียว
- * คืน [{ date, time, title, matched, approx }] (date เป็น ISO, time เป็น 'HH:MM' หรือ '')
+ * names = ชื่อตัวละคร/ผู้เล่นที่รู้อยู่แล้ว ใช้ช่วยจับ "กับใคร"
+ * คืน [{ date, time, title, ctx, matched, approx, doubt }] (date เป็น ISO, time เป็น 'HH:MM' หรือ '')
  */
-function detectDates(rawText, base) {
+function detectDates(rawText, base, names = []) {
     const text = normalizeDigits(rawText);
     const out = [];
     const seen = new Set();
@@ -4202,6 +4521,7 @@ function detectDates(rawText, base) {
 
         const hits = findDateHits(para, base);
         const times = findTimes(para);
+        const nearby = new Map();
 
         for (const h of hits) {
             const keyword = hasCalKeyword(windowOf(para, h.index, h.end));
@@ -4209,14 +4529,26 @@ function detectDates(rawText, base) {
 
             if (h.weak && !keyword && !t) continue;
 
+            // ประโยคสมมติ/ปฏิเสธ: คำกำกวมอย่าง "พรุ่งนี้" ทิ้งเลย ส่วนวันที่ชัดเจนเก็บไว้แต่ติดป้าย "ไม่แน่ใจ"
+            const doubt = hasDoubt(para, h.index, h.end);
+
+            if (doubt && h.weak) continue;
+
             const time = t ? t.time : '';
+
+            // ประโยคเดียวกันที่บอกทั้ง "สงกรานต์" และ "13 เม.ย." = นัดเดียว
+            const mergeKey = `${h.date}|${time}`;
+            if (nearby.has(mergeKey) && h.index - nearby.get(mergeKey) < 60) continue;
+            nearby.set(mergeKey, h.end);
 
             push({
                 date: h.date,
                 time,
-                title: makeTitle(para, h.index, h.end),
+                title: summarizeEvent(para, h.index, h.end, names, h.festival) || makeTitle(para, h.index, h.end),
+                ctx: makeContext(para, h.index, h.end),
                 matched: h.matched,
-                approx: h.approx
+                approx: h.approx,
+                doubt
             }, `${h.date}|${time}|${h.matched}`);
         }
 
@@ -4228,7 +4560,8 @@ function detectDates(rawText, base) {
                 push({
                     date: base,
                     time: t.time,
-                    title: makeTitle(para, t.index, t.end),
+                    title: summarizeEvent(para, t.index, t.end, names, false) || makeTitle(para, t.index, t.end),
+                    ctx: makeContext(para, t.index, t.end),
                     matched: para.slice(t.index, t.end),
                     approx: false
                 }, `${base}|${t.time}|${para.slice(t.index, t.end)}`);
@@ -4965,6 +5298,15 @@ function updateCalBadge() {
     badge.classList.toggle('ltt-hide', count === 0);
 }
 
+// ชื่อที่ SillyTavern รู้อยู่แล้ว (ผู้เล่น/ตัวละคร/คนที่พูด) ใช้ช่วยจับ "กับใคร" ให้แม่นขึ้น
+function calNames(message) {
+    const ctx = getCtx();
+
+    return [...new Set([ctx?.name1, ctx?.name2, message?.name]
+        .map(name => String(name ?? '').trim())
+        .filter(name => name.length >= 2))];
+}
+
 // ตัดแท็ก/บล็อกความคิดออกก่อนจับคำ
 function calCleanText(text) {
     return String(text ?? '')
@@ -5003,7 +5345,9 @@ function calApply(data, index, found) {
             date: hit.date,
             time: hit.time,
             title: hit.title,
-            approx: hit.approx
+            ctx: hit.ctx || '',
+            approx: hit.approx,
+            doubt: Boolean(hit.doubt)
         });
 
         if (!previous.has(key)) added += 1;
@@ -5032,7 +5376,7 @@ function calScanMessage(mesId) {
         if (!message || message.is_system) return;
 
         let data = calData(false);
-        const found = detectDates(calCleanText(message.mes), data?.today || '');
+        const found = detectDates(calCleanText(message.mes), data?.today || '', calNames(message));
         const hadPending = Boolean(data?.items.some(item => item.src === index && item.state === 'new' && item.auto));
 
         if (!found.length && !hadPending) return;
@@ -5069,7 +5413,7 @@ function calScanAll() {
     chat.forEach((message, index) => {
         if (!message || message.is_system) return;
 
-        added += calApply(data, index, detectDates(calCleanText(message.mes), data.today));
+        added += calApply(data, index, detectDates(calCleanText(message.mes), data.today, calNames(message)));
     });
 
     calSave();
@@ -5145,6 +5489,7 @@ function renderCalEdit(item) {
         item.title = title.value.trim() || '(ไม่มีชื่อ)';
         item.state = 'ok';
         item.approx = false;
+        item.doubt = false;
         delete item.fresh;
 
         calEditing = null;
@@ -5183,9 +5528,26 @@ function renderCalCard(item, today) {
     top.appendChild(makeEl('span', 'ltt-book', `${item.approx ? '≈ ' : ''}${fmtDate(item.date)}`));
     if (item.time) top.appendChild(makeEl('span', 'ltt-key', item.time));
     if (today && item.date === today) top.appendChild(makeEl('span', 'ltt-key ltt-sec', 'วันนี้'));
+    if (item.doubt && pending) top.appendChild(makeEl('span', 'ltt-key ltt-sec', 'ไม่แน่ใจ'));
 
     card.appendChild(top);
-    card.appendChild(makeEl('div', 'ltt-snip', item.title));
+    const snip = makeEl('div', 'ltt-snip', item.title);
+
+    // แตะชื่อเพื่อสลับไปดูข้อความเต็มรอบ ๆ ที่จับมา (ชื่อเป็นแค่สรุปสั้น ๆ)
+    if (item.ctx && item.ctx !== item.title) {
+        let full = false;
+
+        snip.classList.add('ltt-snip-tap');
+        snip.title = 'แตะเพื่อดูข้อความที่จับมา';
+        snip.addEventListener('click', () => {
+            full = !full;
+            snip.textContent = full ? item.ctx : item.title;
+            snip.classList.toggle('ltt-snip-full', full);
+            positionWin(document.getElementById(CAL_ID));
+        });
+    }
+
+    card.appendChild(snip);
 
     const row = makeEl('div', 'ltt-keys ltt-roll-act');
 
