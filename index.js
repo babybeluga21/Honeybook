@@ -1495,6 +1495,137 @@ function addStyles() {
 
     ${TOOLWINS} .ltt-roll-act { margin-top: 5px; }
 
+    /* ปฏิทิน: กว้างขึ้นให้ตารางรายเดือนพอดี (ไม่เกินจอ) */
+    #${CAL_ID} { max-width: min(352px, calc(100vw - 16px)); }
+
+    #${CAL_ID} .ltt-month-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 8px 8px 0;
+    }
+
+    #${CAL_ID} .ltt-month-title {
+        -webkit-appearance: none;
+        appearance: none;
+        flex: 1;
+        margin: 0;
+        padding: 2px 0;
+        border: 0 !important;
+        background: none !important;
+        box-shadow: none !important;
+        color: #fff;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 13.5px;
+        letter-spacing: .05em;
+        text-align: center;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #${CAL_ID} .ltt-wk {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 3px;
+        margin: 6px 8px 0;
+        color: #bfaeb6;
+        font-size: 9px;
+        letter-spacing: .06em;
+        text-align: center;
+    }
+
+    #${CAL_ID} .ltt-wk .ltt-we { color: #e0788a; }
+
+    #${CAL_ID} .ltt-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 3px;
+        margin: 4px 8px 0;
+    }
+
+    #${CAL_ID} .ltt-day {
+        -webkit-appearance: none;
+        appearance: none;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1px;
+        min-height: 46px;
+        margin: 0;
+        padding: 2px 3px;
+        overflow: hidden;
+        border: 1px solid rgba(246,232,226,.26) !important;
+        border-radius: 4px !important;
+        background: rgba(246,232,226,.06) !important;
+        box-shadow: none !important;
+        color: #f6e8e2;
+        font-family: inherit;
+        text-align: left;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #${CAL_ID} .ltt-day:active { background: rgba(246,232,226,.22) !important; }
+
+    #${CAL_ID} .ltt-day.ltt-picked {
+        border-color: #f6e8e2 !important;
+        background: rgba(246,232,226,.2) !important;
+    }
+
+    #${CAL_ID} .ltt-day-n {
+        align-self: flex-start;
+        min-width: 14px;
+        padding: 0 2px;
+        border: 1.5px solid transparent;
+        border-radius: 999px;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 9.5px;
+        line-height: 1.25;
+        text-align: center;
+    }
+
+    #${CAL_ID} .ltt-day.ltt-we .ltt-day-n { color: #e0788a; }
+
+    /* วันนี้ในเรื่อง = วงกลมแดงล้อมเลข */
+    #${CAL_ID} .ltt-day.ltt-today .ltt-day-n {
+        border-color: #e0586f;
+        color: #fff;
+    }
+
+    #${CAL_ID} .ltt-day-ev {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        padding: 0 2px;
+        border-radius: 2px;
+        font-size: 7.5px;
+        line-height: 1.35;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #${CAL_ID} .ltt-ev-ok { background: #c42b48; color: #fff; }
+    #${CAL_ID} .ltt-ev-new { border: 1px dashed rgba(246,232,226,.6); color: #f6e8e2; }
+    #${CAL_ID} .ltt-day-more { color: #bfaeb6; font-size: 7.5px; line-height: 1.3; }
+
+    #${CAL_ID} .ltt-day-head {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin: 10px 8px 0;
+    }
+
+    #${CAL_ID} .ltt-day-title {
+        flex: 1 1 auto;
+        color: #fff;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 11.5px;
+        letter-spacing: .03em;
+    }
+
+    #${CAL_ID} .ltt-day-tools { display: inline-flex; gap: 4px; }
+
     /* ปฏิทิน */
     #${CAL_ID} .ltt-book { max-width: none; }
     #${CAL_ID} .ltt-card-top { flex-wrap: wrap; }
@@ -5245,6 +5376,9 @@ function toggleDice() {
 let calOpen = false;
 let calEditing = null;   // id ของรายการที่กำลังแก้
 let calScanArm = 0;
+let calView = 'month';   // 'month' = ตารางรายเดือน / 'list' = รายการเรียงวัน
+let calMonth = null;     // { y, m } เดือนที่กำลังดู (null = เดือนของวันที่เลือก/วันนี้ในเรื่อง)
+let calPicked = '';      // วันที่ที่แตะเลือกในตาราง (ISO)
 
 function calMeta() {
     const meta = getCtx()?.chatMetadata ?? stModule?.chat_metadata;
@@ -5431,6 +5565,8 @@ function calSetToday(value) {
     }
 
     data.today = value;
+    if (value) calPicked = value;
+    calMonth = null;
     calSave();
     renderCal();
 }
@@ -5449,7 +5585,8 @@ function calRemove(item) {
 }
 
 function calSorted(items) {
-    return [...items].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+    // วันเดียวกัน: รายการที่มีเวลาขึ้นก่อน ไม่มีเวลาไว้ท้าย
+    return [...items].sort((a, b) => `${a.date} ${a.time || '99:99'}`.localeCompare(`${b.date} ${b.time || '99:99'}`));
 }
 
 function renderCalEdit(item) {
@@ -5579,6 +5716,155 @@ function renderCalCard(item, today) {
     return card;
 }
 
+// เพิ่มรายการเองในวันที่กำหนด แล้วเปิดโหมดแก้ทันที
+function calAddFresh(date) {
+    const target = calData(true);
+
+    if (!target) {
+        showToast('✖ ยังไม่ได้เปิดแชท');
+        return;
+    }
+
+    const fresh = {
+        id: makeId(),
+        key: '',
+        src: -1,
+        auto: false,
+        state: 'ok',
+        date: date || target.today || realTodayISO(),
+        time: '',
+        title: '',
+        approx: false,
+        fresh: true
+    };
+
+    target.items.push(fresh);
+    calEditing = fresh.id;
+    calPicked = fresh.date;
+    renderCal();
+}
+
+// เดือนที่กำลังดูในตาราง
+function calViewMonth(today) {
+    if (calMonth) return calMonth;
+
+    const p = parseISO(calPicked || today || realTodayISO());
+
+    return { y: p.y, m: p.m };
+}
+
+function calShiftMonth(today, delta) {
+    const cur = calViewMonth(today);
+    const index = cur.y * 12 + (cur.m - 1) + delta;
+    const y = Math.floor(index / 12);
+
+    if (y < 1 || y > 9999) return;
+
+    calMonth = { y, m: (index % 12 + 12) % 12 + 1 };
+    renderCal();
+}
+
+// ตารางรายเดือน (จันทร์ → อาทิตย์ เสาร์/อาทิตย์สีแดง)
+// วันนี้ในเรื่อง = วงกลมแดงที่ตัวเลข / วันที่แตะเลือก = ช่องสว่าง / รายการ = แถบจิ๋วในช่อง
+function renderCalMonth(host, items, today) {
+    const { y, m } = calViewMonth(today);
+    const picked = calPicked || today || realTodayISO();
+
+    const nav = makeEl('div', 'ltt-month-nav');
+
+    nav.appendChild(makeTool('‹', () => calShiftMonth(today, -1), 'ltt-step'));
+
+    const title = makeEl('button', 'ltt-month-title', `${TH_MONTHS[m]} ${y}`);
+
+    title.type = 'button';
+    title.title = 'แตะเพื่อกลับไปเดือนของวันที่เลือก';
+    title.addEventListener('click', () => {
+        calMonth = null;
+        renderCal();
+    });
+
+    nav.appendChild(title);
+    nav.appendChild(makeTool('›', () => calShiftMonth(today, 1), 'ltt-step'));
+    host.appendChild(nav);
+
+    const header = makeEl('div', 'ltt-wk');
+
+    [1, 2, 3, 4, 5, 6, 0].forEach(day => {
+        header.appendChild(makeEl('span', day === 0 || day === 6 ? 'ltt-we' : '', TH_DAYS_SHORT[day]));
+    });
+
+    host.appendChild(header);
+
+    const byDate = new Map();
+
+    for (const item of calSorted(items)) {
+        if (!byDate.has(item.date)) byDate.set(item.date, []);
+        byDate.get(item.date).push(item);
+    }
+
+    const grid = makeEl('div', 'ltt-grid');
+    const lead = (weekdayOf(isoOf(y, m, 1)) + 6) % 7;
+
+    for (let i = 0; i < lead; i++) grid.appendChild(makeEl('div', 'ltt-day-blank'));
+
+    for (let d = 1; d <= daysInMonth(y, m); d++) {
+        const iso = isoOf(y, m, d);
+        const dow = weekdayOf(iso);
+        const events = byDate.get(iso) || [];
+
+        const cell = makeEl('button', 'ltt-day');
+
+        cell.type = 'button';
+        if (dow === 0 || dow === 6) cell.classList.add('ltt-we');
+        if (iso === today) cell.classList.add('ltt-today');
+        if (iso === picked) cell.classList.add('ltt-picked');
+        if (events.length) cell.setAttribute('aria-label', `${fmtDate(iso)} มี ${events.length} รายการ`);
+
+        cell.appendChild(makeEl('span', 'ltt-day-n', String(d)));
+
+        events.slice(0, 2).forEach(event => {
+            // ชื่อรายการแบบ "อะไร · กับใคร · ที่ไหน" โชว์เฉพาะส่วน "อะไร" ในช่องเล็ก ๆ
+            const label = String(event.title || '').split(' · ')[0] || '•';
+
+            cell.appendChild(makeEl('span', `ltt-day-ev ${event.state === 'new' ? 'ltt-ev-new' : 'ltt-ev-ok'}`, label));
+        });
+
+        if (events.length > 2) cell.appendChild(makeEl('span', 'ltt-day-more', `+${events.length - 2}`));
+
+        cell.addEventListener('click', () => {
+            calPicked = iso;
+            calEditing = null;
+            renderCal();
+        });
+
+        grid.appendChild(cell);
+    }
+
+    host.appendChild(grid);
+
+    // รายการของวันที่เลือก
+    const dayHead = makeEl('div', 'ltt-day-head');
+
+    dayHead.appendChild(makeEl('span', 'ltt-day-title', `${fmtDate(picked)}${picked === today ? ' · วันนี้' : ''}`));
+
+    const tools = makeEl('span', 'ltt-day-tools');
+
+    tools.appendChild(makeTool('＋ เพิ่ม', () => calAddFresh(picked)));
+
+    if (picked !== today) tools.appendChild(makeTool('ตั้งเป็นวันนี้', () => calSetToday(picked)));
+
+    dayHead.appendChild(tools);
+    host.appendChild(dayHead);
+
+    const dayItems = byDate.get(picked) || [];
+
+    if (!dayItems.length) {
+        host.appendChild(makeEl('div', 'ltt-note', 'ไม่มีรายการในวันนี้'));
+    } else {
+        dayItems.forEach(item => host.appendChild(renderCalCard(item, today)));
+    }
+}
+
 function renderCal() {
     const win = document.getElementById(CAL_ID);
     if (!win) return;
@@ -5586,6 +5872,7 @@ function renderCal() {
     const top = win.querySelector('.ltt-cal-top');
     const list = win.querySelector('.ltt-list');
     const meta = win.querySelector('.ltt-meta');
+    const keepScroll = list.scrollTop;
 
     const data = calData(false);
     const today = data?.today || '';
@@ -5629,34 +5916,23 @@ function renderCal() {
     dateBar.appendChild(makeTool('›', () => shift(1), 'ltt-step'));
     top.appendChild(dateBar);
 
-    // แถวปุ่ม
+    // แถวปุ่ม: สลับมุมมอง + สแกน + ยืนยันทั้งหมด
     const actionBar = makeEl('div', 'ltt-bar');
 
-    actionBar.appendChild(makeTool('＋ เพิ่ม', () => {
-        const target = calData(true);
-
-        if (!target) {
-            showToast('✖ ยังไม่ได้เปิดแชท');
-            return;
-        }
-
-        const fresh = {
-            id: makeId(),
-            key: '',
-            src: -1,
-            auto: false,
-            state: 'ok',
-            date: target.today || realTodayISO(),
-            time: '',
-            title: '',
-            approx: false,
-            fresh: true
-        };
-
-        target.items.push(fresh);
-        calEditing = fresh.id;
+    actionBar.appendChild(makeTool('เดือน', () => {
+        calView = 'month';
+        calEditing = null;
         renderCal();
-    }));
+    }, calView === 'month' ? 'ltt-on' : ''));
+
+    actionBar.appendChild(makeTool('รายการ', () => {
+        calView = 'list';
+        renderCal();
+    }, calView === 'list' ? 'ltt-on' : ''));
+
+    if (calView === 'list') {
+        actionBar.appendChild(makeTool('＋ เพิ่ม', () => calAddFresh(today || realTodayISO())));
+    }
 
     // แตะครั้งแรก = ขอยืนยัน แตะอีกครั้งภายใน 3 วินาที = สแกน
     actionBar.appendChild(makeTool('สแกนทั้งแชท', button => {
@@ -5682,7 +5958,6 @@ function renderCal() {
 
     top.appendChild(actionBar);
 
-    // รายการ
     if (!today) {
         list.appendChild(makeEl(
             'div',
@@ -5691,12 +5966,15 @@ function renderCal() {
         ));
     }
 
-    if (!items.length) {
+    if (calView === 'month') {
+        renderCalMonth(list, items, today);
+    } else if (!items.length) {
         list.appendChild(makeEl('div', 'ltt-note', 'ยังไม่มีรายการ เมื่อในแชทพูดถึงวันนัดหรืองาน จะขึ้นที่นี่ให้ติ๊กยืนยัน'));
     } else {
         calSorted(items).forEach(item => list.appendChild(renderCalCard(item, today)));
     }
 
+    list.scrollTop = keepScroll;
     positionWin(win);
 }
 
@@ -5721,6 +5999,8 @@ function openCal() {
 
     calOpen = true;
     calEditing = null;
+    calMonth = null;
+    calPicked = '';
     win.classList.add('ltt-visible');
     syncOrb();
 
