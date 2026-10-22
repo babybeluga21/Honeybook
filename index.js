@@ -1644,6 +1644,358 @@ function addStyles() {
     #${CAL_ID} .ltt-cal-edit .ltt-bar .ltt-grow { width: auto; }
     #${CAL_ID} .ltt-cal-edit .ltt-bar .ltt-time { width: 84px; }
 
+    /* ============================================================
+     * ปฏิทิน: ธีมกระดาษ (ครีม / ฟ้า / ชมพู / ดำ) ทับสไตล์ไวน์แดงของหน้าต่างอื่น
+     * ============================================================ */
+    #${CAL_ID} {
+        --p-paper: #f6eedf;
+        --p-cell: rgba(255,255,255,.55);
+        --p-ink: #3d312b;
+        --p-ink-a: rgba(61,49,43,.55);
+        --p-soft: #8a7868;
+        --p-rule: #d3c0a0;
+        --p-accent: #b3243f;
+        --p-accent-rgb: 179,36,63;
+        --p-on: #fff7f0;
+        --p-weekend: #c0463a;
+        --p-pick: rgba(247,226,122,.5);
+        --p-hl0: #f7e27a;
+        --p-hl1: #a6dfd4;
+        --p-hl2: #f6bcc6;
+        --p-chip-ink: #3d312b;
+        --p-grain: .09;
+    }
+
+    #${CAL_ID}[data-cal-theme="sky"] {
+        --p-paper: #edf3fa;
+        --p-cell: rgba(255,255,255,.72);
+        --p-ink: #1f3a6b;
+        --p-ink-a: rgba(31,58,107,.5);
+        --p-soft: #6f84ab;
+        --p-rule: #b4c5df;
+        --p-accent: #d43b3b;
+        --p-accent-rgb: 212,59,59;
+        --p-weekend: #d43b3b;
+        --p-pick: rgba(188,215,247,.65);
+        --p-hl0: #bcd7f7;
+        --p-hl1: #f9e48a;
+        --p-hl2: #cfe9d4;
+        --p-chip-ink: #1f3a6b;
+    }
+
+    #${CAL_ID}[data-cal-theme="rose"] {
+        --p-paper: #fbeeee;
+        --p-cell: rgba(255,255,255,.62);
+        --p-ink: #5a2e3a;
+        --p-ink-a: rgba(90,46,58,.5);
+        --p-soft: #a07a85;
+        --p-rule: #e8c3ca;
+        --p-accent: #c2335a;
+        --p-accent-rgb: 194,51,90;
+        --p-weekend: #c2335a;
+        --p-pick: rgba(249,201,212,.7);
+        --p-hl0: #f9c9d4;
+        --p-hl1: #ffe49a;
+        --p-hl2: #c9e4f5;
+        --p-chip-ink: #5a2e3a;
+    }
+
+    #${CAL_ID}[data-cal-theme="night"] {
+        --p-paper: #1d1b1e;
+        --p-cell: rgba(255,255,255,.05);
+        --p-ink: #ece4e0;
+        --p-ink-a: rgba(236,228,224,.5);
+        --p-soft: #a69c9a;
+        --p-rule: #4c4044;
+        --p-accent: #e0455a;
+        --p-accent-rgb: 224,69,90;
+        --p-on: #fff;
+        --p-weekend: #e0788a;
+        --p-pick: rgba(217,194,90,.28);
+        --p-hl0: #d9c25a;
+        --p-hl1: #6fb7ab;
+        --p-hl2: #d98a99;
+        --p-chip-ink: #1d1b1e;
+        --p-grain: .16;
+    }
+
+    /* กระดาษ: พื้นสี + เม็ดกระดาษจาง ๆ + แสงนุ่มที่มุม */
+    #${CAL_ID} {
+        border: 1px solid var(--p-rule);
+        border-radius: 6px;
+        background-color: var(--p-paper);
+        background-image:
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .2 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E"),
+            radial-gradient(110% 60% at 100% 0%, rgba(255,255,255,.35), transparent 60%),
+            radial-gradient(90% 55% at 0% 100%, rgba(var(--p-accent-rgb), .07), transparent 65%);
+        background-blend-mode: multiply, normal, normal;
+        color: var(--p-ink);
+        box-shadow: 0 14px 30px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.35);
+    }
+
+    #${CAL_ID}[data-cal-theme="night"] {
+        background-blend-mode: screen, normal, normal;
+        box-shadow: 0 14px 30px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+
+    #${CAL_ID}::before { border: 1px dashed var(--p-rule); border-radius: 4px; }
+
+    /* มุม: คลิปหนีบทองสองอันด้านบน / จุดแดงด้านล่าง ประกายเอาออก */
+    #${CAL_ID} .ltt-spk { display: none; }
+
+    #${CAL_ID} .ltt-c-tl,
+    #${CAL_ID} .ltt-c-tr {
+        top: -10px;
+        width: 30px;
+        height: 16px;
+        border-radius: 3px 3px 6px 6px;
+        background:
+            linear-gradient(90deg, transparent 0 7px, rgba(0,0,0,.16) 7px 8px, transparent 8px 22px, rgba(0,0,0,.16) 22px 23px, transparent 23px),
+            linear-gradient(180deg, #f3d77f 0%, #d4a63a 52%, #a67a1c 100%);
+        box-shadow: 0 2px 3px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.55);
+        transform: none;
+    }
+
+    #${CAL_ID} .ltt-c-tl { left: 44%; right: auto; }
+    #${CAL_ID} .ltt-c-tr { left: auto; right: 14%; }
+
+    #${CAL_ID} .ltt-c-bl,
+    #${CAL_ID} .ltt-c-br {
+        background: var(--p-accent);
+        box-shadow: 0 0 0 1.5px var(--p-paper);
+    }
+
+    /* ป้ายชื่อหน้าต่าง */
+    #${CAL_ID} .ltt-title {
+        background: var(--p-accent);
+        color: var(--p-on);
+        border-color: rgba(0,0,0,.25);
+        box-shadow: 0 0 0 2px var(--p-paper), 0 2px 6px rgba(0,0,0,.3);
+    }
+
+    #${CAL_ID} .ltt-title svg { color: var(--p-on); }
+
+    #${CAL_ID} .ltt-head {
+        background: linear-gradient(90deg, var(--p-accent), rgba(var(--p-accent-rgb), .1) 75%, transparent) left bottom / 100% 1px no-repeat;
+    }
+
+    #${CAL_ID} .ltt-meta { color: var(--p-soft); }
+    #${CAL_ID} .ltt-meta::before { color: var(--p-accent); }
+
+    #${CAL_ID} .ltt-nav {
+        border-color: var(--p-rule);
+        background: rgba(255,255,255,.35);
+    }
+
+    #${CAL_ID}[data-cal-theme="night"] .ltt-nav { background: rgba(255,255,255,.06); }
+
+    #${CAL_ID} .ltt-nav button { color: var(--p-ink); }
+    #${CAL_ID} .ltt-nav .ltt-close { color: var(--p-accent); }
+    #${CAL_ID} .ltt-nav .ltt-close::before { background: var(--p-rule); }
+
+    #${CAL_ID} .ltt-list {
+        scrollbar-color: var(--p-rule) transparent;
+    }
+
+    #${CAL_ID} .ltt-list::-webkit-scrollbar-thumb { background: var(--p-rule); }
+
+    #${CAL_ID} .ltt-hint { color: var(--p-soft); }
+
+    #${CAL_ID} .ltt-note { color: var(--p-soft); }
+    #${CAL_ID} .ltt-note::before { color: var(--p-accent); }
+
+    /* ปุ่ม / ช่องกรอก */
+    #${CAL_ID} .ltt-tool {
+        border: 1px solid var(--p-ink-a) !important;
+        background: rgba(255,255,255,.28) !important;
+        color: var(--p-ink);
+    }
+
+    #${CAL_ID}[data-cal-theme="night"] .ltt-tool { background: rgba(255,255,255,.05) !important; }
+
+    #${CAL_ID} .ltt-tool:active { background: rgba(var(--p-accent-rgb), .2) !important; }
+
+    #${CAL_ID} .ltt-tool.ltt-on {
+        border-color: var(--p-accent) !important;
+        background: var(--p-accent) !important;
+        color: var(--p-on);
+    }
+
+    #${CAL_ID} .ltt-tool.ltt-confirm,
+    #${CAL_ID} .ltt-tool.ltt-danger {
+        border-color: var(--p-accent) !important;
+        background: var(--p-accent) !important;
+        color: var(--p-on);
+    }
+
+    #${CAL_ID} .ltt-search-input {
+        border: 1px solid var(--p-rule) !important;
+        background: rgba(255,255,255,.6) !important;
+        color: var(--p-ink) !important;
+        caret-color: var(--p-accent);
+    }
+
+    #${CAL_ID}[data-cal-theme="night"] .ltt-search-input { background: rgba(255,255,255,.07) !important; }
+    #${CAL_ID} .ltt-search-input::placeholder { color: var(--p-soft); }
+
+    #${CAL_ID} .ltt-search-input[type="date"],
+    #${CAL_ID} .ltt-search-input[type="time"] { color-scheme: light; }
+    #${CAL_ID}[data-cal-theme="night"] .ltt-search-input[type="date"],
+    #${CAL_ID}[data-cal-theme="night"] .ltt-search-input[type="time"] { color-scheme: dark; }
+
+    /* ปุ่มเลือกสีกระดาษ */
+    #${CAL_ID} .ltt-swatches { display: inline-flex; gap: 4px; margin-left: auto; }
+
+    #${CAL_ID} .ltt-sw {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 15px;
+        height: 15px;
+        margin: 0;
+        padding: 0;
+        border: 1.5px solid var(--p-ink-a) !important;
+        border-radius: 50% !important;
+        box-shadow: none !important;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #${CAL_ID} .ltt-sw-cream { background: #f6eedf !important; }
+    #${CAL_ID} .ltt-sw-sky { background: #bcd7f7 !important; }
+    #${CAL_ID} .ltt-sw-rose { background: #f6bcc6 !important; }
+    #${CAL_ID} .ltt-sw-night { background: #1d1b1e !important; }
+
+    #${CAL_ID} .ltt-sw.ltt-sw-on {
+        border-color: var(--p-accent) !important;
+        box-shadow: 0 0 0 2px var(--p-paper), 0 0 0 3.5px var(--p-accent) !important;
+    }
+
+    /* หัวเดือน + แถบเส้นแบบสมุดปฏิทิน */
+    #${CAL_ID} .ltt-month-title {
+        color: var(--p-ink);
+        font-size: 15px;
+        letter-spacing: .08em;
+    }
+
+    #${CAL_ID} .ltt-bars {
+        display: flex;
+        justify-content: center;
+        gap: 3px;
+        margin: 1px 0 0;
+    }
+
+    #${CAL_ID} .ltt-bars i {
+        display: block;
+        width: 26px;
+        height: 3px;
+        border-radius: 1px;
+        background: var(--p-rule);
+    }
+
+    #${CAL_ID} .ltt-bars i:first-child { background: var(--p-accent); }
+
+    #${CAL_ID} .ltt-wk { color: var(--p-soft); font-family: Georgia, 'Times New Roman', serif; }
+    #${CAL_ID} .ltt-wk .ltt-we { color: var(--p-weekend); }
+
+    /* ช่องวัน: กระดาษซ้อนกรอบบาง */
+    #${CAL_ID} .ltt-day {
+        border: 1px solid var(--p-rule) !important;
+        background: var(--p-cell) !important;
+        color: var(--p-ink);
+        box-shadow: 0 1px 0 rgba(0,0,0,.05) !important;
+    }
+
+    #${CAL_ID} .ltt-day:active { background: var(--p-pick) !important; }
+
+    #${CAL_ID} .ltt-day.ltt-picked {
+        border-color: var(--p-ink-a) !important;
+        background: var(--p-pick) !important;
+    }
+
+    #${CAL_ID} .ltt-day-n { color: var(--p-ink); }
+    #${CAL_ID} .ltt-day.ltt-we .ltt-day-n { color: var(--p-weekend); }
+
+    /* วันนี้ในเรื่อง = วงปากกาแดงวาดมือ (เอียงนิด ๆ ไม่กลมเป๊ะ) */
+    #${CAL_ID} .ltt-day.ltt-today .ltt-day-n {
+        border: 1.6px solid var(--p-accent);
+        border-radius: 52% 48% 56% 44% / 46% 56% 44% 54%;
+        padding: 0 3px;
+        color: var(--p-accent);
+        font-weight: 700;
+        transform: rotate(-7deg);
+    }
+
+    /* รายการในช่อง: แถบปากกาเน้นข้อความ (เหลือง/เขียวมิ้นต์/ชมพู) */
+    #${CAL_ID} .ltt-day-ev { color: var(--p-chip-ink); }
+
+    #${CAL_ID} .ltt-ev-ok {
+        background: linear-gradient(transparent 14%, var(--hl, var(--p-hl0)) 14%, var(--hl, var(--p-hl0)) 94%, transparent 94%);
+        border-radius: 0;
+    }
+
+    #${CAL_ID} .ltt-ev-ok.ltt-hl-0 { --hl: var(--p-hl0); }
+    #${CAL_ID} .ltt-ev-ok.ltt-hl-1 { --hl: var(--p-hl1); }
+    #${CAL_ID} .ltt-ev-ok.ltt-hl-2 { --hl: var(--p-hl2); }
+
+    #${CAL_ID} .ltt-ev-new {
+        border: 1px dashed var(--p-ink-a);
+        color: var(--p-ink);
+    }
+
+    #${CAL_ID} .ltt-day-more { color: var(--p-soft); }
+
+    /* วันที่เลือก */
+    #${CAL_ID} .ltt-day-head {
+        padding-top: 7px;
+        background: linear-gradient(90deg, var(--p-rule), transparent) left top / 100% 1px no-repeat;
+    }
+
+    #${CAL_ID} .ltt-day-title { color: var(--p-ink); }
+
+    /* การ์ดรายการ = โน้ตกระดาษ */
+    #${CAL_ID} .ltt-card {
+        --ltt-c: var(--p-accent-rgb);
+        border: 1px solid var(--p-rule);
+        background: rgba(255,255,255,.62);
+        box-shadow: 0 1px 2px rgba(0,0,0,.08);
+    }
+
+    #${CAL_ID}[data-cal-theme="night"] .ltt-card { background: rgba(255,255,255,.06); }
+
+    #${CAL_ID} .ltt-card.ltt-weak { border-style: dashed; border-color: var(--p-ink-a); }
+    #${CAL_ID} .ltt-card-title,
+    #${CAL_ID} .ltt-snip { color: var(--p-ink); }
+    #${CAL_ID} .ltt-snip-full { color: var(--p-soft); }
+
+    #${CAL_ID} .ltt-book {
+        background: var(--p-accent);
+        color: var(--p-on);
+    }
+
+    #${CAL_ID} .ltt-key {
+        border-color: var(--p-ink-a);
+        background: rgba(var(--p-accent-rgb), .08);
+        color: var(--p-ink);
+    }
+
+    #${CAL_ID} .ltt-key::before { background: var(--p-accent); }
+
+    #${CAL_ID} .ltt-key.ltt-sec {
+        border-color: var(--p-ink-a);
+        background: transparent;
+        color: var(--p-soft);
+    }
+
+    #${CAL_ID} .ltt-key.ltt-sec::before { background: transparent; border-color: var(--p-accent); }
+
+    #${CAL_ID} .ltt-act {
+        border-color: var(--p-ink-a) !important;
+        background: rgba(255,255,255,.3) !important;
+        color: var(--p-ink);
+    }
+
+    #${CAL_ID} .ltt-act:active { background: rgba(var(--p-accent-rgb), .22) !important; }
+
     /* ไฮไลต์ข้อความที่เลื่อนไปหา */
     .mes.ltt-flash { animation: ltt-mes-flash 2.4s ease-out; }
 
@@ -2027,14 +2379,19 @@ function bindGlobalListeners() {
         const dice = document.getElementById(DICE_ID);
         const cal = document.getElementById(CAL_ID);
 
+        // ปุ่มในหน้าต่างหลายตัววาดเนื้อหาใหม่ตอนถูกกด (ตัวที่ถูกกดหลุดจาก DOM ก่อนมาถึงตรงนี้)
+        // จึงดูจากเส้นทางของเหตุการณ์ที่บันทึกไว้ตอนเริ่มส่ง ไม่ใช่แค่ event.target ปัจจุบัน
+        const path = event.composedPath ? event.composedPath() : [];
+        const inside = el => Boolean(el) && (el.contains(event.target) || path.includes(el));
+
         if (
-            panel?.contains(event.target) ||
-            button?.contains(event.target) ||
-            sheet?.contains(event.target) ||
-            search?.contains(event.target) ||
-            write?.contains(event.target) ||
-            dice?.contains(event.target) ||
-            cal?.contains(event.target)
+            inside(panel) ||
+            inside(button) ||
+            inside(sheet) ||
+            inside(search) ||
+            inside(write) ||
+            inside(dice) ||
+            inside(cal)
         ) {
             return;
         }
@@ -5378,7 +5735,39 @@ let calEditing = null;   // id ของรายการที่กำลั�
 let calScanArm = 0;
 let calView = 'month';   // 'month' = ตารางรายเดือน / 'list' = รายการเรียงวัน
 let calMonth = null;     // { y, m } เดือนที่กำลังดู (null = เดือนของวันที่เลือก/วันนี้ในเรื่อง)
-let calPicked = '';      // วันที่ที่แตะเลือกในตาราง (ISO)
+let calPicked = '';
+let calResetScroll = false;   // สลับมุมมองแล้วเริ่มที่บนสุด      // วันที่ที่แตะเลือกในตาราง (ISO)
+
+// สีกระดาษปฏิทิน (เพิ่มธีมใหม่ได้: เติมที่นี่ + เพิ่มสีใน CSS ชื่อ data-cal-theme)
+const CAL_THEMES = [['cream', 'ครีม'], ['sky', 'ฟ้า'], ['rose', 'ชมพู'], ['night', 'ดำ']];
+const CAL_THEME_KEY = `${EXT_ID}-cal-theme`;
+let calTheme = loadCalTheme();
+
+function loadCalTheme() {
+    try {
+        const saved = localStorage.getItem(CAL_THEME_KEY);
+        return CAL_THEMES.some(([id]) => id === saved) ? saved : 'cream';
+    } catch {
+        return 'cream';
+    }
+}
+
+function setCalTheme(id) {
+    calTheme = id;
+
+    try { localStorage.setItem(CAL_THEME_KEY, id); } catch { /* ข้าม */ }
+
+    renderCal();
+}
+
+// สีปากกาเน้นข้อความตามชื่อรายการ (ชื่อเดียวกัน = สีเดียวกันเสมอ)
+function calHighlight(label) {
+    let sum = 0;
+
+    for (const ch of String(label)) sum += ch.codePointAt(0);
+
+    return `ltt-hl-${sum % 3}`;
+}
 
 function calMeta() {
     const meta = getCtx()?.chatMetadata ?? stModule?.chat_metadata;
@@ -5653,7 +6042,7 @@ function renderCalEdit(item) {
     return card;
 }
 
-function renderCalCard(item, today) {
+function renderCalCard(item, today, hideDate = false) {
     if (calEditing === item.id) return renderCalEdit(item);
 
     const pending = item.state === 'new';
@@ -5662,7 +6051,7 @@ function renderCalCard(item, today) {
 
     const top = makeEl('div', 'ltt-card-top');
 
-    top.appendChild(makeEl('span', 'ltt-book', `${item.approx ? '≈ ' : ''}${fmtDate(item.date)}`));
+    if (!hideDate) top.appendChild(makeEl('span', 'ltt-book', `${item.approx ? '≈ ' : ''}${fmtDate(item.date)}`));
     if (item.time) top.appendChild(makeEl('span', 'ltt-key', item.time));
     if (today && item.date === today) top.appendChild(makeEl('span', 'ltt-key ltt-sec', 'วันนี้'));
     if (item.doubt && pending) top.appendChild(makeEl('span', 'ltt-key ltt-sec', 'ไม่แน่ใจ'));
@@ -5787,6 +6176,13 @@ function renderCalMonth(host, items, today) {
     nav.appendChild(makeTool('›', () => calShiftMonth(today, 1), 'ltt-step'));
     host.appendChild(nav);
 
+    // แถบเส้นใต้ชื่อเดือน (แดง 1 ช่อง + เทา 4 ช่อง)
+    const bars = makeEl('div', 'ltt-bars');
+
+    for (let i = 0; i < 5; i++) bars.appendChild(makeEl('i'));
+
+    host.appendChild(bars);
+
     const header = makeEl('div', 'ltt-wk');
 
     [1, 2, 3, 4, 5, 6, 0].forEach(day => {
@@ -5826,7 +6222,7 @@ function renderCalMonth(host, items, today) {
             // ชื่อรายการแบบ "อะไร · กับใคร · ที่ไหน" โชว์เฉพาะส่วน "อะไร" ในช่องเล็ก ๆ
             const label = String(event.title || '').split(' · ')[0] || '•';
 
-            cell.appendChild(makeEl('span', `ltt-day-ev ${event.state === 'new' ? 'ltt-ev-new' : 'ltt-ev-ok'}`, label));
+            cell.appendChild(makeEl('span', `ltt-day-ev ${event.state === 'new' ? 'ltt-ev-new' : `ltt-ev-ok ${calHighlight(label)}`}`, label));
         });
 
         if (events.length > 2) cell.appendChild(makeEl('span', 'ltt-day-more', `+${events.length - 2}`));
@@ -5861,7 +6257,7 @@ function renderCalMonth(host, items, today) {
     if (!dayItems.length) {
         host.appendChild(makeEl('div', 'ltt-note', 'ไม่มีรายการในวันนี้'));
     } else {
-        dayItems.forEach(item => host.appendChild(renderCalCard(item, today)));
+        dayItems.forEach(item => host.appendChild(renderCalCard(item, today, true)));
     }
 }
 
@@ -5873,6 +6269,8 @@ function renderCal() {
     const list = win.querySelector('.ltt-list');
     const meta = win.querySelector('.ltt-meta');
     const keepScroll = list.scrollTop;
+
+    win.dataset.calTheme = calTheme;
 
     const data = calData(false);
     const today = data?.today || '';
@@ -5921,12 +6319,14 @@ function renderCal() {
 
     actionBar.appendChild(makeTool('เดือน', () => {
         calView = 'month';
+        calResetScroll = true;
         calEditing = null;
         renderCal();
     }, calView === 'month' ? 'ltt-on' : ''));
 
     actionBar.appendChild(makeTool('รายการ', () => {
         calView = 'list';
+        calResetScroll = true;
         renderCal();
     }, calView === 'list' ? 'ltt-on' : ''));
 
@@ -5956,6 +6356,22 @@ function renderCal() {
         }, 'ltt-on'));
     }
 
+    // เลือกสีกระดาษ
+    const swatches = makeEl('span', 'ltt-swatches');
+
+    for (const [id, name] of CAL_THEMES) {
+        const dot = makeEl('button', `ltt-sw ltt-sw-${id}${id === calTheme ? ' ltt-sw-on' : ''}`);
+
+        dot.type = 'button';
+        dot.title = `สีกระดาษ: ${name}`;
+        dot.setAttribute('aria-label', `สีกระดาษ ${name}`);
+        dot.addEventListener('mousedown', event => event.preventDefault());
+        dot.addEventListener('click', () => setCalTheme(id));
+
+        swatches.appendChild(dot);
+    }
+
+    actionBar.appendChild(swatches);
     top.appendChild(actionBar);
 
     if (!today) {
@@ -5974,7 +6390,8 @@ function renderCal() {
         calSorted(items).forEach(item => list.appendChild(renderCalCard(item, today)));
     }
 
-    list.scrollTop = keepScroll;
+    list.scrollTop = calResetScroll ? 0 : keepScroll;
+    calResetScroll = false;
     positionWin(win);
 }
 
