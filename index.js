@@ -22,7 +22,7 @@ const ARC_RADIUS = 62;
 const ARC_STEP = 40;
 
 // ไอคอนประกายสี่แฉก (ใช้สีตามตัวอักษร)
-const SPARK = '<svg viewBox="0 0 10 10" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M5 0C5.4 3.2 6.8 4.6 10 5C6.8 5.4 5.4 6.8 5 10C4.6 6.8 3.2 5.4 0 5C3.2 4.6 4.6 3.2 5 0Z"/></svg>';
+const SPARK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><path d="M12 1.5V22.5M1.5 12H22.5"/><path d="M12 7C12.6 10.4 13.6 11.4 17 12C13.6 12.6 12.6 13.6 12 17C11.4 13.6 10.4 12.6 7 12C10.4 11.4 11.4 10.4 12 7Z" fill="currentColor" stroke="none"/></svg>';
 
 const SEARCH_ICON = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="5" r="3.4"/><path d="M7.6 7.6L10.6 10.6"/></svg>';
 const WRITE_ICON = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1.5 8V6.4C1.5 4.4 2.6 3.2 4.4 2.9V4C3.6 4.3 3.2 4.9 3.2 5.6H4.6V8H1.5ZM6.9 8V6.4C6.9 4.4 8 3.2 9.8 2.9V4C9 4.3 8.6 4.9 8.6 5.6H10V8H6.9Z"/></svg>';
@@ -89,7 +89,7 @@ let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v22';
+const VERSION = 'v23-noir';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -128,123 +128,107 @@ function addStyles() {
     // แล้วข้ามไป หน้าต่างจะไม่มี CSS และหลุดไปอยู่ใต้หน้าแชทแบบมองไม่เห็น
     document.getElementById(`${EXT_ID}-style`)?.remove();
 
+    // โหลดฟอนต์ editorial (Italiana / Space Mono / Noto Sans Thai)
+    if (!document.getElementById(`${EXT_ID}-fonts`)) {
+        const fonts = document.createElement('link');
+        fonts.id = `${EXT_ID}-fonts`;
+        fonts.rel = 'stylesheet';
+        fonts.href = 'https://fonts.googleapis.com/css2?family=Italiana&family=Space+Mono&family=Noto+Sans+Thai:wght@300;400;600&display=swap';
+        document.head.appendChild(fonts);
+    }
+
     const style = document.createElement('style');
     style.id = `${EXT_ID}-style`;
 
     const baseCss = `
-    /* ===== ลูกแก้ว (ป้ายครีม) ===== */
+    /* ============================================================
+     * Honeybook Noir editorial theme (v23)
+     * โทน: ดำ · เทา · น้ำเงินหม่น | ฟอนต์: Italiana / Space Mono / Noto Sans Thai
+     * ============================================================ */
+
+    :root {
+        --ltt-bg: #090a0d;
+        --ltt-panel: #0d0f13;
+        --ltt-card: rgba(223,226,232,.035);
+        --ltt-txt: #dfe2e8;
+        --ltt-dim: #9097a3;
+        --ltt-mute: #5d6470;
+        --ltt-line: rgba(223,226,232,.55);
+        --ltt-line2: rgba(223,226,232,.2);
+        --ltt-blue: #8fa3c4;
+        --ltt-blue2: #5f739a;
+        --ltt-blue3: #232d45;
+        --ltt-hi: #dfe2e8;
+        --ltt-on-hi: #0a0b0e;
+        --ltt-serif: 'Italiana', 'Cormorant Garamond', Didot, 'Times New Roman', serif;
+        --ltt-thai: 'Noto Sans Thai', 'Sarabun', system-ui, sans-serif;
+        --ltt-mono: 'Space Mono', 'IBM Plex Mono', 'Courier New', monospace;
+    }
+
+    /* ===== ลูกแก้ว (orb) ===== */
     #${BUTTON_ID} {
         position: fixed !important;
         left: 8px;
         top: 50%;
         z-index: 999998;
-
         width: ${ORB_SIZE}px;
         height: ${ORB_SIZE}px;
         padding: 0;
         margin: 0;
         outline: none;
-
         display: flex;
         align-items: center;
         justify-content: center;
-
         border: 0 !important;
         border-radius: 50% !important;
-        background: #f6e8e2 !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,.3) !important;
-        color: #b3243f;
-
+        background: #0a0b0e !important;
+        box-shadow:
+            0 0 0 1px var(--ltt-line),
+            0 0 0 4px #0a0b0e,
+            0 0 0 5px var(--ltt-line2),
+            0 0 16px rgba(143,163,196,.22) !important;
+        color: var(--ltt-blue);
         cursor: pointer;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
-
         transform: translateY(-100%);
-        transition: background .2s ease, color .2s ease, transform .15s ease;
-    }
-
-    /* วงบางล้อมรอบ */
-    #${BUTTON_ID}::before {
-        content: '';
-        position: absolute;
-        inset: -3px;
-        border-radius: 50%;
-        border: 1px solid rgba(246,232,226,.6);
-        pointer-events: none;
-        transition: border-color .2s ease;
-    }
-
-    #${BUTTON_ID} .ltt-gem {
-        display: flex;
-        line-height: 0;
-        pointer-events: none;
-        transition: transform .2s ease;
-    }
-
-    #${BUTTON_ID} .ltt-gem svg {
-        width: 11px;
-        height: 11px;
-    }
-
-    #${BUTTON_ID}:not(.ltt-active):hover {
-        background: #fff7f3 !important;
+        transition: background .2s ease, color .2s ease, transform .15s ease, box-shadow .2s ease;
     }
 
     #${BUTTON_ID}:active {
         transform: translateY(-100%) scale(.94);
     }
 
-    /* ตอนเปิด: วงกลายเป็นแดง ประกายกระพริบ */
-    #${BUTTON_ID}.ltt-active {
-        background: #b3243f !important;
-        color: #f6e8e2;
+    #${BUTTON_ID} .ltt-gem {
+        display: flex;
+        line-height: 0;
+        pointer-events: none;
+        transition: transform .3s ease;
     }
 
-    #${BUTTON_ID}.ltt-active::before {
-        border-color: rgba(246,232,226,.95);
+    #${BUTTON_ID} .ltt-gem svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    #${BUTTON_ID}.ltt-active {
+        background: var(--ltt-hi) !important;
+        color: var(--ltt-on-hi);
+        box-shadow:
+            0 0 0 1px var(--ltt-hi),
+            0 0 0 4px #0a0b0e,
+            0 0 0 5px var(--ltt-line),
+            0 0 18px rgba(143,163,196,.4) !important;
     }
 
     #${BUTTON_ID}.ltt-active .ltt-gem {
-        transform: scale(1.1) rotate(90deg);
+        transform: scale(1.08) rotate(90deg);
     }
 
-    #${BUTTON_ID} .ltt-spark {
-        position: absolute;
-        display: flex;
-        opacity: 0;
-        transform: scale(0);
-        pointer-events: none;
-        transition: opacity .2s ease, transform .2s ease;
-    }
+    /* ซ่อนประกายเก่า — ใช้เงาวงซ้อนแทน */
+    #${BUTTON_ID} .ltt-spark { display: none !important; }
 
-    #${BUTTON_ID} .ltt-spark svg {
-        width: 100%;
-        height: 100%;
-    }
-
-    #${BUTTON_ID} .ltt-s1 { top: -11px; right: -10px; width: 8px; height: 8px; color: #f6e8e2; }
-    #${BUTTON_ID} .ltt-s2 { bottom: -9px; left: -9px; width: 5px; height: 5px; color: #e0788a; }
-
-    #${BUTTON_ID}.ltt-active .ltt-spark {
-        opacity: 1;
-        transform: scale(1);
-        animation: ltt-twinkle 1.6s ease-in-out infinite alternate;
-    }
-
-    #${BUTTON_ID}.ltt-active .ltt-s2 {
-        animation-delay: .8s;
-    }
-
-    @keyframes ltt-twinkle {
-        from { transform: scale(.55); opacity: .5; }
-        to   { transform: scale(1);   opacity: 1; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        #${BUTTON_ID}.ltt-active .ltt-spark { animation: none; }
-    }
-
-    /* ===== ตัวเลือกกลม (จุดศูนย์กลางอยู่ที่ลูกแก้ว) ===== */
+    /* ===== วงล้อตัวเลือก ===== */
     #${PANEL_ID} {
         --r: ${ARC_RADIUS}px;
         position: fixed;
@@ -254,10 +238,9 @@ function addStyles() {
         height: 0;
         z-index: 999999;
         pointer-events: none;
-        font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
+        font-family: var(--ltt-thai);
     }
 
-    /* เส้นโค้งบางเชื่อมตัวเลือก */
     #${PANEL_ID} .ltt-arc {
         position: absolute;
         left: 0;
@@ -265,7 +248,7 @@ function addStyles() {
         width: calc(var(--r) * 2);
         height: calc(var(--r) * 2);
         box-sizing: border-box;
-        border: 1px solid rgba(245,239,242,.3);
+        border: 1px solid var(--ltt-line2);
         border-radius: 50%;
         opacity: 0;
         transform: translate(-50%, -50%) scale(.6);
@@ -280,7 +263,6 @@ function addStyles() {
     #${PANEL_ID} .ltt-item {
         appearance: none;
         -webkit-appearance: none;
-
         position: absolute;
         left: 0;
         top: 0;
@@ -288,28 +270,29 @@ function addStyles() {
         height: ${ITEM_SIZE}px;
         padding: 0;
         margin: 0;
-
         display: flex;
         align-items: center;
         justify-content: center;
-
         border: 0 !important;
         border-radius: 50% !important;
-        background: rgba(246,232,226,.92) !important;
-        box-shadow: 0 3px 8px rgba(0,0,0,.3) !important;
-        color: #b3243f;
-
+        background: #0b0c10 !important;
+        box-shadow:
+            0 0 0 1px var(--ltt-line),
+            0 0 0 4px #0b0c10,
+            0 0 0 5px var(--ltt-line2),
+            0 6px 14px rgba(0,0,0,.6) !important;
+        color: var(--ltt-txt);
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
         touch-action: none;
-
         opacity: 0;
         pointer-events: none;
         transform: translate(-50%, -50%) scale(.3);
         transition:
             transform .28s cubic-bezier(.2,.9,.3,1.25) var(--d, 0s),
             opacity .18s ease var(--d, 0s),
-            background .15s ease;
+            background .15s ease,
+            color .15s ease;
     }
 
     #${PANEL_ID}.ltt-visible .ltt-item {
@@ -319,7 +302,8 @@ function addStyles() {
     }
 
     #${PANEL_ID} .ltt-item:active {
-        background: #fff !important;
+        background: var(--ltt-hi) !important;
+        color: var(--ltt-on-hi);
     }
 
     #${PANEL_ID} .ltt-item svg {
@@ -327,735 +311,63 @@ function addStyles() {
         height: 12px;
     }
 
-    /* วงบางรอบตัวเลือก */
-    #${PANEL_ID} .ltt-item::before {
-        content: '';
-        position: absolute;
-        inset: -3px;
-        border-radius: 50%;
-        border: 1px solid rgba(246,232,226,.5);
-        pointer-events: none;
-    }
-
-    /* พู่ห้อยใต้ตัวเลือก */
-    #${PANEL_ID} .ltt-item::after {
-        content: '';
-        position: absolute;
-        left: 50%;
-        top: calc(100% + 3px);
-        width: 5px;
-        height: 11px;
-        transform: translateX(-50%);
-        pointer-events: none;
-        background:
-            linear-gradient(#c24a5e, #c24a5e) center top / 1px 7px no-repeat,
-            radial-gradient(circle, #c24a5e 1.6px, transparent 2px) center bottom / 5px 5px no-repeat;
-    }
+    /* ตัดพู่ห้อย/วงซ้อนเก่า */
+    #${PANEL_ID} .ltt-item::before,
+    #${PANEL_ID} .ltt-item::after { display: none !important; }
 
     #${PANEL_ID} .ltt-item-label {
         position: absolute;
-        left: calc(100% + 9px);
+        left: calc(100% + 12px);
         top: 50%;
         transform: translateY(-50%);
-        padding: 1px 6px;
-
-        border: 1px solid rgba(194,74,94,.6);
-        border-radius: 2px;
-        background: rgba(20,18,28,.5);
-        color: #efe7ea;
-
-        font-family: Georgia, serif;
-        font-size: 9px;
-        letter-spacing: 2px;
+        padding: 2px 9px 1px;
+        background: rgba(8,9,12,.88);
+        border: 1px solid var(--ltt-line);
+        color: var(--ltt-txt);
+        font: 400 7.5px/14px var(--ltt-mono);
+        letter-spacing: .24em;
         text-transform: uppercase;
         white-space: nowrap;
         cursor: pointer;
     }
 
+    #${PANEL_ID} .ltt-item-label::before,
+    #${PANEL_ID} .ltt-item-label::after {
+        content: '';
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: var(--ltt-bg);
+        border: 1px solid var(--ltt-hi);
+    }
+
+    #${PANEL_ID} .ltt-item-label::before { left: -3px; top: -3px; }
+    #${PANEL_ID} .ltt-item-label::after { right: -3px; bottom: -3px; }
+
     #${PANEL_ID}.ltt-flip .ltt-item-label {
         left: auto;
-        right: calc(100% + 9px);
+        right: calc(100% + 12px);
     }
 
     #${PANEL_ID} .ltt-count {
         position: absolute;
-        top: -5px;
-        right: -5px;
-        min-width: 13px;
-        height: 13px;
+        top: -7px;
+        right: -8px;
+        min-width: 14px;
+        height: 14px;
         padding: 0 3px;
         box-sizing: border-box;
-
         display: flex;
         align-items: center;
         justify-content: center;
-
-        border-radius: 7px;
-        background: #b02a45;
-        color: #fff;
-        font-size: 9px;
-        line-height: 1;
-    }
-
-    /* ===== แจ้งเตือนกลางล่างจอ (แนวนอน เล็ก) ===== */
-    #${EXT_ID}-toast {
-        position: fixed;
-        left: 0;
-        right: 0;
-        top: 50%;
-        width: fit-content;
-        max-width: min(88vw, 360px);
-        margin: 0 auto;
-        box-sizing: border-box;
-        overflow: hidden;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        padding: 5px 11px 7px;
-
-        background: linear-gradient(90deg, rgba(125,30,52,.95), rgba(30,28,42,.97) 75%);
-        -webkit-backdrop-filter: blur(12px);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(246,232,226,.4);
-        border-left: 2px solid #c24a5e;
-        border-radius: 5px;
-        box-shadow: 0 4px 14px rgba(0,0,0,.4);
-
-        color: #efe7ea;
-        font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
-        font-size: 11px;
-        line-height: 1.4;
-        text-align: center;
-
-        z-index: 1000001;
-        pointer-events: none;
-        animation: ltt-toast-in .28s cubic-bezier(.2,.9,.3,1.15) both;
-    }
-
-    #${EXT_ID}-toast .ltt-toast-icon {
-        flex: none;
-        display: flex;
-        width: 8px;
-        height: 8px;
-        color: #e0788a;
-        animation: ltt-toast-twinkle 1.6s ease-in-out infinite alternate;
-    }
-
-    #${EXT_ID}-toast .ltt-toast-icon svg {
-        width: 100%;
-        height: 100%;
-    }
-
-    #${EXT_ID}-toast .ltt-toast-body {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: center;
-        gap: 1px 10px;
-        min-width: 0;
-    }
-
-    #${EXT_ID}-toast .ltt-toast-line {
-        color: #f6e8e2;
-        word-break: break-word;
-    }
-
-    #${EXT_ID}-toast .ltt-toast-bar {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 1.5px;
-        background: #e0788a;
-        opacity: .85;
-        transform-origin: left center;
-        animation: ltt-toast-bar var(--ms, 5s) linear both;
-    }
-
-    /* แบบเตือน: โทนส้มอำพัน */
-    #${EXT_ID}-toast.ltt-toast-warn {
-        border-color: rgba(240,163,94,.6);
-        border-left-color: #f0a35e;
-    }
-
-    #${EXT_ID}-toast.ltt-toast-warn .ltt-toast-icon {
-        color: #f0a35e;
-    }
-
-    #${EXT_ID}-toast.ltt-toast-warn .ltt-toast-bar {
-        background: #f0a35e;
-    }
-
-    #${EXT_ID}-toast.ltt-toast-out {
-        animation: ltt-toast-out .26s ease forwards;
-    }
-
-    @keyframes ltt-toast-in {
-        from { opacity: 0; transform: translateY(6px) scale(.94); }
-        to   { opacity: 1; transform: none; }
-    }
-
-    @keyframes ltt-toast-out {
-        from { opacity: 1; transform: none; }
-        to   { opacity: 0; transform: translateY(-4px) scale(.96); }
-    }
-
-    @keyframes ltt-toast-bar {
-        from { transform: scaleX(1); }
-        to   { transform: scaleX(0); }
-    }
-
-    @keyframes ltt-toast-twinkle {
-        from { transform: scale(.6); opacity: .55; }
-        to   { transform: scale(1);  opacity: 1; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        #${EXT_ID}-toast,
-        #${EXT_ID}-toast .ltt-toast-icon {
-            animation: none;
-        }
-
-        #${EXT_ID}-toast .ltt-toast-bar {
-            animation-duration: 0s;
-        }
-    }
-
-    /* ===== หน้าต่างรายการทริกเกอร์ (กรอบซ้อนสองชั้น + แท็บห้อย + ประกาย) ===== */
-    #${SHEET_ID} {
-        position: fixed;
-        left: 8px;
-        right: 8px;
-        bottom: 80px;
-        max-width: 270px;
-        max-height: 38vh;
-        margin: 0 auto;
-        box-sizing: border-box;
-
-        display: flex;
-        flex-direction: column;
-
-        /* พื้นเรียบ ไล่เฉดไวน์แดง → ม่วงเข้ม มีแสงฟุ้งนุ่ม ๆ ที่มุม (ไม่มีลายตาราง) */
-        background-color: #1c1824;
-        background-image:
-            radial-gradient(120% 70% at 100% 0%, rgba(224,120,138,.20), transparent 60%),
-            radial-gradient(90% 60% at 0% 100%, rgba(179,36,63,.26), transparent 65%),
-            linear-gradient(170deg, #5e1730 0%, #2a1a2c 50%, #1a1622 100%);
-
-        border: 1px solid rgba(246,232,226,.55);
-        border-radius: 4px;
-        box-shadow:
-            0 12px 30px rgba(0,0,0,.55),
-            0 0 0 1px rgba(0,0,0,.35),
-            inset 0 1px 0 rgba(246,232,226,.14);
-
-        color: #efe7ea;
-        font-family: 'Segoe UI', 'Sarabun', Tahoma, sans-serif;
-        font-size: 10.5px;
-        line-height: 1.45;
-
-        z-index: 1000000;
-        visibility: hidden;
-        opacity: 0;
-        transform: translateY(6px);
-        pointer-events: none;
-        transition: opacity .18s ease, transform .18s ease, visibility .18s;
-    }
-
-    #${SHEET_ID}.ltt-visible {
-        visibility: visible;
-        opacity: 1;
-        transform: none;
-        pointer-events: auto;
-    }
-
-    /* เส้นในบาง ๆ ซ้อนอีกชั้น */
-    #${SHEET_ID}::before {
-        content: '';
-        position: absolute;
-        inset: 3px;
-        border: 1px solid rgba(224,120,138,.38);
-        border-radius: 2px;
-        pointer-events: none;
-    }
-
-    /* ข้าวหลามตัดที่มุมกรอบ */
-    #${SHEET_ID} .ltt-corner {
-        position: absolute;
-        width: 6px;
-        height: 6px;
-        background: #f6e8e2;
-        box-shadow: 0 0 0 1.5px #1c1824, 0 0 6px rgba(246,232,226,.35);
-        transform: rotate(45deg);
-        pointer-events: none;
-    }
-
-    #${SHEET_ID} .ltt-c-tl { top: -4px; left: -4px; }
-    #${SHEET_ID} .ltt-c-tr { top: -4px; right: -4px; }
-    #${SHEET_ID} .ltt-c-bl { bottom: -4px; left: -4px; }
-    #${SHEET_ID} .ltt-c-br { bottom: -4px; right: -4px; }
-
-    /* ประกายสี่แฉกเกาะขอบ */
-    #${SHEET_ID} .ltt-spk {
-        position: absolute;
-        display: flex;
-        color: #e0788a;
-        pointer-events: none;
-        animation: ltt-sheet-twinkle 2.2s ease-in-out infinite alternate;
-    }
-
-    #${SHEET_ID} .ltt-spk svg {
-        width: 100%;
-        height: 100%;
-    }
-
-    #${SHEET_ID} .ltt-spk-a { width: 13px; height: 13px; top: -9px; right: 22px; color: #f6e8e2; }
-    #${SHEET_ID} .ltt-spk-b { width: 8px;  height: 8px;  bottom: -6px; left: 30px; animation-delay: 1.1s; }
-    #${SHEET_ID} .ltt-spk-c { width: 6px;  height: 6px;  top: -5px; right: 46px; animation-delay: .5s; }
-
-    @keyframes ltt-sheet-twinkle {
-        from { transform: scale(.6); opacity: .55; }
-        to   { transform: scale(1);  opacity: 1; }
-    }
-
-    @keyframes ltt-card-in {
-        from { opacity: 0; transform: translateY(5px); }
-        to   { opacity: 1; transform: none; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        #${SHEET_ID} .ltt-spk,
-        #${SHEET_ID} .ltt-card { animation: none; }
-    }
-
-    /* แท็บครีมห้อยคาบขอบบน */
-    #${SHEET_ID} .ltt-title {
-        position: absolute;
-        top: -10px;
-        left: 16px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 1px 11px 1px 8px;
-        background: linear-gradient(180deg, #fbefe9, #f0dcd4);
-        color: #8f1f38;
-        border: 1px solid #b3243f;
-        border-radius: 2px;
-        box-shadow: 0 0 0 2px #1c1824, 0 2px 6px rgba(0,0,0,.35);
-        font-family: Georgia, serif;
-        font-size: 9.5px;
-        font-weight: 700;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        line-height: 15px;
-    }
-
-    #${SHEET_ID} .ltt-title svg {
-        width: 8px;
-        height: 8px;
-        color: #b3243f;
-    }
-
-    /* แถบหัว: ปุ่มเลื่อนรวมเป็นแคปซูลเดียว */
-    #${SHEET_ID} .ltt-head {
-        flex: none;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin: 0 8px;
-        padding: 12px 0 6px 2px;
-        background: linear-gradient(90deg, rgba(224,120,138,.7), rgba(224,120,138,.12) 70%, transparent) left bottom / 100% 1px no-repeat;
-    }
-
-    #${SHEET_ID} .ltt-nav {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        padding: 2px 3px;
-        border: 1px solid rgba(224,120,138,.5);
-        border-radius: 12px;
-        background: rgba(10,8,16,.38);
-    }
-
-    #${SHEET_ID} .ltt-nav button {
-        appearance: none;
-        -webkit-appearance: none;
-        width: 18px;
-        height: 18px;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 0 !important;
-        border-radius: 50% !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        color: #f6e8e2;
-        font-size: 13px;
-        line-height: 1;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background .15s ease;
-    }
-
-    #${SHEET_ID} .ltt-nav button:active {
-        background: rgba(246,232,226,.2) !important;
-    }
-
-    #${SHEET_ID} .ltt-nav button:disabled {
-        opacity: .28;
-    }
-
-    /* ปุ่มปิดแยกด้วยเส้นกั้นบาง ๆ */
-    #${SHEET_ID} .ltt-nav .ltt-close {
-        margin-left: 3px;
-        font-size: 10px;
-        color: #e0788a;
-        position: relative;
-    }
-
-    #${SHEET_ID} .ltt-nav .ltt-close::before {
-        content: '';
-        position: absolute;
-        left: -4px;
-        top: 4px;
-        bottom: 4px;
-        width: 1px;
-        background: rgba(224,120,138,.45);
-    }
-
-    #${SHEET_ID} .ltt-nav-label {
-        min-width: 26px;
-        padding: 0 3px;
-        white-space: nowrap;
-        text-align: center;
-        font-family: 'Courier New', monospace;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: .5px;
-        color: #f6e8e2;
-    }
-
-    /* จำนวนรายการ (ซ้ายของแถบหัว) */
-    #${SHEET_ID} .ltt-meta {
-        flex: 1 1 auto;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        min-width: 0;
-        padding: 2px 0 2px 2px;
-        color: #f6e8e2;
-        font-size: 10px;
-        line-height: 2;
-        letter-spacing: .3px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    #${SHEET_ID} .ltt-meta::before {
-        content: '\\2726';
-        flex: none;
-        color: #e0788a;
-        font-size: 9px;
-    }
-
-    #${SHEET_ID} .ltt-meta:empty {
-        display: none;
-    }
-
-    /* ข้อความที่ใช้ค้นหา: ห้ามซ่อนส่วนเกินแนวตั้ง ไม่งั้นสระ/วรรณยุกต์ไทยที่สูงจะโดนตัด */
-    #${SHEET_ID} .ltt-query {
-        flex: none;
-        margin: 5px 10px 0;
-        padding: 3px 0;
-        color: #bfaeb6;
-        font-size: 9.5px;
-        line-height: 2;
-        white-space: normal;
-        overflow: visible;
-        word-break: break-word;
-    }
-
-    #${SHEET_ID} .ltt-query:empty {
-        display: none;
-    }
-
-    #${SHEET_ID} .ltt-list {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        min-height: 0;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 6px 8px 16px;
-        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
-        mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
-        scrollbar-width: thin;
-        scrollbar-color: rgba(224,120,138,.6) transparent;
-    }
-
-    #${SHEET_ID} .ltt-list::-webkit-scrollbar { width: 4px; }
-    #${SHEET_ID} .ltt-list::-webkit-scrollbar-track { background: transparent; }
-    #${SHEET_ID} .ltt-list::-webkit-scrollbar-thumb { background: rgba(224,120,138,.55); border-radius: 2px; }
-
-
-    /* ปุ่มย้าย (ติ๊ก = เปิดโหมดลากย้าย / กดอีกครั้ง = ล็อกตำแหน่ง) */
-    #${SHEET_ID} .ltt-nav button svg {
-        width: 11px;
-        height: 11px;
-        pointer-events: none;
-    }
-
-    #${SHEET_ID} .ltt-nav .ltt-move .ltt-tick { display: none; }
-
-    #${SHEET_ID} .ltt-nav .ltt-move.ltt-on {
-        background: #f6e8e2 !important;
-        color: #8f1f38;
-    }
-
-    #${SHEET_ID} .ltt-nav .ltt-move.ltt-on .ltt-arrows { display: none; }
-    #${SHEET_ID} .ltt-nav .ltt-move.ltt-on .ltt-tick { display: block; }
-
-    #${SHEET_ID} .ltt-nav .ltt-reset[hidden] { display: none; }
-
-
-    /* โหมดย้าย: กรอบประเรืองแสง ลากได้ทั้งหน้าต่าง */
-    #${SHEET_ID}.ltt-moving {
-        cursor: grab;
-        touch-action: none;
-        user-select: none;
-        -webkit-user-select: none;
-        box-shadow:
-            0 0 0 1px rgba(246,232,226,.9),
-            0 0 14px rgba(224,120,138,.55),
-            0 12px 30px rgba(0,0,0,.55);
-    }
-
-    #${SHEET_ID}.ltt-moving::before {
-        border-style: dashed;
-        border-color: rgba(246,232,226,.7);
-    }
-
-    #${SHEET_ID}.ltt-moving.ltt-dragging {
-        cursor: grabbing;
-        transition: none;
-    }
-
-    #${SHEET_ID}.ltt-moving .ltt-list {
-        touch-action: none;
-        overflow: hidden;
-    }
-
-    /* ข้อความสถานะว่าง */
-    #${SHEET_ID} .ltt-note {
-        padding: 14px 0 8px;
-        color: #cdbcc4;
+        background: var(--ltt-blue3);
+        border: 1px solid var(--ltt-blue);
+        border-radius: 0;
+        color: var(--ltt-txt);
+        font: 400 8px/12px var(--ltt-mono);
         text-align: center;
     }
 
-    #${SHEET_ID} .ltt-note::before {
-        content: '\\2726';
-        display: block;
-        margin-bottom: 4px;
-        color: #e0788a;
-        font-size: 15px;
-        line-height: 1;
-    }
-
-    /* การ์ดรายการ: แถบสีด้านซ้าย + เลขลำดับ + ป้ายชื่อเล่ม */
-    #${SHEET_ID} .ltt-card {
-        position: relative;
-        flex: none;
-        --ltt-c: 224,120,138;
-        padding: 7px 10px 7px 10px;
-        border: 1px solid rgba(var(--ltt-c), .3);
-        border-radius: 5px;
-        background: linear-gradient(135deg, rgba(10,8,16,.55), rgba(10,8,16,.3));
-        box-shadow: inset 0 1px 0 rgba(246,232,226,.05);
-        overflow: hidden;
-        animation: ltt-card-in .3s ease both;
-        animation-delay: calc(var(--i, 0) * 45ms);
-    }
-
-    /* มุมกรอบ 4 มุม (ตัวแทนแถบด้านซ้ายเดิม) */
-    #${SHEET_ID} .ltt-card::before {
-        content: '';
-        position: absolute;
-        inset: 3px;
-        pointer-events: none;
-        background:
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top left / 9px 1px no-repeat,
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top left / 1px 9px no-repeat,
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top right / 9px 1px no-repeat,
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) top right / 1px 9px no-repeat,
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom left / 9px 1px no-repeat,
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom left / 1px 9px no-repeat,
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom right / 9px 1px no-repeat,
-            linear-gradient(rgb(var(--ltt-c)), rgb(var(--ltt-c))) bottom right / 1px 9px no-repeat;
-        opacity: .85;
-    }
-
-    /* constant = กรอบทอง */
-    #${SHEET_ID} .ltt-card.ltt-const {
-        --ltt-c: 232,194,122;
-        border-color: rgba(232,194,122,.34);
-    }
-
-    /* ไม่พบคีย์: เส้นประ จางลง */
-    #${SHEET_ID} .ltt-card.ltt-weak {
-        border-style: dashed;
-        opacity: .86;
-    }
-
-    #${SHEET_ID} .ltt-card-top {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    #${SHEET_ID} .ltt-num {
-        flex: none;
-        font-family: 'Courier New', monospace;
-        font-size: 9px;
-        font-weight: 700;
-        color: #e0788a;
-        letter-spacing: .5px;
-    }
-
-    #${SHEET_ID} .ltt-card.ltt-const .ltt-num {
-        color: #e8c27a;
-    }
-
-    #${SHEET_ID} .ltt-book {
-        flex: none;
-        max-width: 40%;
-        padding: 0 6px;
-        background: linear-gradient(180deg, #c42b48, #a21f39);
-        color: #f6e8e2;
-        border-radius: 2px;
-        font-family: Georgia, serif;
-        font-size: 8.5px;
-        letter-spacing: .7px;
-        line-height: 1.9;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    #${SHEET_ID} .ltt-card-title {
-        flex: 1;
-        min-width: 0;
-        color: #fff;
-        font-size: 11px;
-        font-weight: 600;
-        line-height: 1.3;
-        word-break: break-word;
-    }
-
-    /* แถวคีย์: มีป้ายหัวแถวเล็ก ๆ */
-    #${SHEET_ID} .ltt-keys {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 3px;
-        margin-top: 4px;
-    }
-
-    #${SHEET_ID} .ltt-keys + .ltt-keys {
-        margin-top: 3px;
-    }
-
-    #${SHEET_ID} .ltt-keys-label {
-        flex: none;
-        min-width: 19px;
-        color: #e0788a;
-        font-family: Georgia, serif;
-        font-size: 7.5px;
-        letter-spacing: 1.4px;
-        text-transform: uppercase;
-    }
-
-    #${SHEET_ID} .ltt-key {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 0 7px 0 6px;
-        border: 1px solid rgba(246,232,226,.4);
-        border-radius: 9px;
-        background: rgba(246,232,226,.09);
-        color: #f6e8e2;
-        font-size: 9.5px;
-        line-height: 14px;
-        word-break: break-word;
-    }
-
-    #${SHEET_ID} .ltt-key::before {
-        content: '';
-        flex: none;
-        width: 4px;
-        height: 4px;
-        background: #e0788a;
-        transform: rotate(45deg);
-    }
-
-    #${SHEET_ID} .ltt-key.ltt-sec {
-        border-style: dashed;
-        border-color: rgba(246,232,226,.3);
-        background: transparent;
-        color: #d9c9d0;
-    }
-
-    #${SHEET_ID} .ltt-key.ltt-sec::before {
-        background: transparent;
-        border: 1px solid #e0788a;
-        box-sizing: border-box;
-    }
-
-    /* ป้ายบอกเหตุผลท้ายการ์ด */
-    #${SHEET_ID} .ltt-tag {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-top: 4px;
-        color: #bfaeb6;
-        font-size: 9px;
-    }
-
-    #${SHEET_ID} .ltt-tag::before {
-        content: '\\2726';
-        flex: none;
-        color: #e0788a;
-        font-size: 9px;
-    }
-
-    #${SHEET_ID} .ltt-card.ltt-const .ltt-tag {
-        color: #e8c27a;
-    }
-
-    #${SHEET_ID} .ltt-card.ltt-const .ltt-tag::before {
-        color: #e8c27a;
-    }
-
-    /* สถานะการติดตามท้ายรายการ */
-    #${SHEET_ID} .ltt-status {
-        margin-top: 4px;
-        padding-top: 7px;
-        border-top: 1px dashed rgba(246,232,226,.2);
-        color: #9d8c95;
-        font-size: 8.5px;
-        line-height: 1.45;
-        text-align: center;
-    }
-
-`;
-
-    const extraCss = `
-    /* ===== ลูกแก้วเล็ก (ค้นหา) ===== */
     #${PANEL_ID} .ltt-item.ltt-small {
         width: ${ITEM_SMALL}px;
         height: ${ITEM_SMALL}px;
@@ -1066,21 +378,13 @@ function addStyles() {
         height: 10px;
     }
 
-    #${PANEL_ID} .ltt-item.ltt-small::after {
-        width: 4px;
-        height: 9px;
-        background:
-            linear-gradient(#c24a5e, #c24a5e) center top / 1px 6px no-repeat,
-            radial-gradient(circle, #c24a5e 1.4px, transparent 1.8px) center bottom / 4px 4px no-repeat;
-    }
-
-    /* ป้ายของลูกแก้วเล็กวางเหนือลูกแก้ว ไม่ให้ชนป้าย/เลขของ Lorebook */
     #${PANEL_ID} .ltt-item.ltt-small .ltt-item-label {
         left: 2px;
         top: auto;
         bottom: calc(100% + 8px);
         transform: none;
-        font-size: 8.5px;
+        font-size: 7px;
+        letter-spacing: .2em;
     }
 
     #${PANEL_ID}.ltt-flip .ltt-item.ltt-small .ltt-item-label {
@@ -1088,273 +392,6 @@ function addStyles() {
         right: 2px;
     }
 
-    /* ===== หน้าต่างค้นหา / Write (ส่วนที่ต่างจากหน้าต่าง Triggers) ===== */
-    ${WINS} .ltt-search-box {
-        flex: none;
-        margin: 8px 8px 0;
-    }
-
-    ${WINS} .ltt-search-input {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 100%;
-        box-sizing: border-box;
-        margin: 0;
-        padding: 6px 10px;
-        border: 1px solid rgba(224,120,138,.45);
-        border-radius: 5px;
-        background: rgba(10,8,16,.5);
-        box-shadow: none;
-        color: #f6e8e2;
-        font-family: inherit;
-        font-size: 12px;
-        line-height: 1.6;
-        outline: none;
-    }
-
-    ${WINS} .ltt-search-input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
-    ${WINS} .ltt-search-input::placeholder { color: #9d8c95; }
-    ${WINS} .ltt-search-input:focus { border-color: rgba(246,232,226,.8); }
-
-    ${WINS} .ltt-hit { cursor: pointer; }
-    ${WINS} .ltt-spacer { flex: 1; }
-
-    ${WINS} .ltt-snip {
-        margin-top: 5px;
-        color: #e6d8de;
-        font-size: 10.5px;
-        line-height: 1.75;
-        word-break: break-word;
-    }
-
-    ${WINS} .ltt-snip mark {
-        padding: 0 2px;
-        border-radius: 2px;
-        background: rgba(224,120,138,.38);
-        color: #fff;
-    }
-
-    ${WINS} .ltt-act {
-        -webkit-appearance: none;
-        appearance: none;
-        flex: none;
-        margin: 0;
-        padding: 0 8px;
-        border: 1px solid rgba(246,232,226,.4) !important;
-        border-radius: 9px !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        color: #f6e8e2;
-        font-family: inherit;
-        font-size: 9px;
-        line-height: 15px;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    ${WINS} .ltt-act:active { background: rgba(246,232,226,.2) !important; }
-
-    ${WINS} .ltt-act.ltt-confirm {
-        border-color: #e0788a !important;
-        background: #b3243f !important;
-        color: #fff;
-    }
-
-    /* ===== Write: กรอบเตี้ย ปุ่มแถวเดียว คำอธิบายจิ๋วอยู่ขวาบน ===== */
-    #${WRITE_ID} {
-        width: fit-content;
-        max-width: min(300px, calc(100vw - 16px));
-    }
-
-    /* ประกายและข้าวหลามตัดมุมขวาบนเอาออก เพื่อเว้นที่ให้ปุ่มปิดกับป้ายคำอธิบาย */
-    #${WRITE_ID} .ltt-spk,
-    #${WRITE_ID} .ltt-c-tr { display: none; }
-
-    /* หัวไม่กินพื้นที่แนวตั้ง: คำอธิบายกับปุ่มปิดลอยอยู่บนขอบกล่องขวาบน */
-    #${WRITE_ID} .ltt-head { display: contents; }
-
-    /* ป้ายคำอธิบายจิ๋ว วางบนขอบบน ก่อนถึงปุ่มปิด */
-    #${WRITE_ID} .ltt-meta {
-        position: absolute;
-        top: -6px;
-        right: 16px;
-        z-index: 3;
-        flex: none;
-        padding: 0 5px;
-        overflow: visible;
-        background: rgba(28,24,36,.94);
-        border: 1px solid rgba(224,120,138,.45);
-        border-radius: 2px;
-        color: rgba(246,232,226,.78);
-        font-size: 7px;
-        line-height: 11px;
-        letter-spacing: 0;
-    }
-
-    #${WRITE_ID} .ltt-meta::before { display: none; }
-
-    /* ปุ่มปิดแยกเป็นปุ่มกลมที่มุมขวาบน (สไตล์เดียวกับป้าย WRITE) */
-    #${WRITE_ID} .ltt-nav {
-        position: absolute;
-        top: -8px;
-        right: -7px;
-        z-index: 4;
-        padding: 0;
-        border: 0;
-        background: none;
-    }
-
-    #${WRITE_ID} .ltt-nav .ltt-close {
-        width: 16px;
-        height: 16px;
-        margin: 0;
-        border: 1px solid #b3243f !important;
-        background: linear-gradient(180deg, #fbefe9, #f0dcd4) !important;
-        box-shadow: 0 0 0 2px #1c1824, 0 2px 6px rgba(0,0,0,.35) !important;
-        color: #8f1f38;
-        font-size: 8px;
-        font-weight: 700;
-    }
-
-    #${WRITE_ID} .ltt-nav .ltt-close::before { display: none; }
-
-    #${WRITE_ID} .ltt-row {
-        flex: none;
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        padding: 11px 9px 8px;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none;
-    }
-
-    #${WRITE_ID} .ltt-row::-webkit-scrollbar { display: none; }
-
-    #${WRITE_ID} .ltt-tool {
-        -webkit-appearance: none;
-        appearance: none;
-        flex: none;
-        min-width: 24px;
-        height: 22px;
-        margin: 0;
-        padding: 0 5px;
-        border: 1px solid rgba(246,232,226,.4) !important;
-        border-radius: 5px !important;
-        background: rgba(246,232,226,.09) !important;
-        box-shadow: none !important;
-        color: #f6e8e2;
-        font-family: inherit;
-        font-size: 12px;
-        line-height: 1;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background .15s ease, border-color .15s ease;
-    }
-
-    #${WRITE_ID} .ltt-tool:active { background: rgba(246,232,226,.28) !important; }
-
-    /* แตะ 2 ครั้งแล้ว รอประกบตัวปิด */
-    #${WRITE_ID} .ltt-tool.ltt-on {
-        border-color: #f6e8e2 !important;
-        background: #c42b48 !important;
-        box-shadow: 0 0 0 1px rgba(246,232,226,.25) !important;
-        color: #fff;
-    }
-
-    /* ปุ่มสัญลักษณ์กุ๊กกิ๊ก (เปิดถาดสัญลักษณ์) */
-    #${WRITE_ID} .ltt-tool.ltt-sym { color: #e0788a; }
-
-    #${WRITE_ID} .ltt-tool.ltt-open {
-        border-color: #f6e8e2 !important;
-        background: rgba(246,232,226,.3) !important;
-    }
-
-    #${WRITE_ID} .ltt-name {
-        max-width: 64px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-size: 11.5px;
-    }
-
-    #${WRITE_ID} .ltt-sep {
-        flex: none;
-        width: 1px;
-        height: 14px;
-        margin: 0 1px;
-        background: rgba(224,120,138,.5);
-    }
-
-    /* ตัวเลือกจำนวนดอกจัน 1 / 2 / 3 */
-    #${WRITE_ID} .ltt-grp {
-        flex: none;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-    }
-
-    #${WRITE_ID} .ltt-lvl {
-        display: flex;
-        height: 22px;
-        box-sizing: border-box;
-        padding: 2px;
-        border: 1px solid rgba(224,120,138,.55);
-        border-radius: 11px;
-        background: rgba(10,8,16,.4);
-    }
-
-    #${WRITE_ID} .ltt-lvl button {
-        -webkit-appearance: none;
-        appearance: none;
-        min-width: 13px;
-        height: 16px;
-        margin: 0;
-        padding: 0;
-        border: 0 !important;
-        border-radius: 8px !important;
-        background: none !important;
-        box-shadow: none !important;
-        color: #d9a9b3;
-        font: 700 9.5px 'Courier New', monospace;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    #${WRITE_ID} .ltt-lvl button.ltt-sel {
-        background: #f6e8e2 !important;
-        color: #8f1f38;
-    }
-
-    /* ถาดสัญลักษณ์ ลอยเหนือหน้าต่าง Write */
-    #${WRITE_ID} .ltt-fly {
-        position: absolute;
-        left: 50%;
-        bottom: calc(100% + 16px);
-        transform: translateX(-50%);
-        box-sizing: border-box;
-        max-width: calc(100vw - 16px);
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 6px 8px;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none;
-        background: linear-gradient(170deg, #4a1428, #231826 60%, #1a1622);
-        border: 1px solid rgba(246,232,226,.55);
-        border-radius: 4px;
-        box-shadow:
-            0 8px 20px rgba(0,0,0,.5),
-            0 0 0 1px rgba(0,0,0,.35),
-            inset 0 0 0 2px #261827,
-            inset 0 0 0 3px rgba(224,120,138,.3);
-    }
-
-    #${WRITE_ID} .ltt-fly::-webkit-scrollbar { display: none; }
-    #${WRITE_ID} .ltt-fly[hidden] { display: none; }
-    #${WRITE_ID} .ltt-fly .ltt-tool { min-width: 26px; font-size: 13px; }
-
-    /* ===== วงล้อ: ลูกที่หลุดโค้งจางหาย / แผ่นรับนิ้วปัดตามแนวโค้ง ===== */
     #${PANEL_ID} .ltt-catch {
         position: absolute;
         left: 0;
@@ -1373,7 +410,894 @@ function addStyles() {
     #${PANEL_ID}.ltt-rolling .ltt-item { transition: none; }
     #${PANEL_ID} .ltt-count.ltt-hide { display: none; }
 
-    /* ===== Dice / Calendar ===== */
+    /* ===== Toast ===== */
+    #${EXT_ID}-toast {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 42%;
+        width: fit-content;
+        max-width: min(88vw, 330px);
+        margin: 0 auto;
+        box-sizing: border-box;
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        padding: 0 13px 0 0;
+        background: rgba(8,9,12,.94);
+        border: 1px solid var(--ltt-line);
+        border-radius: 0;
+        box-shadow: 0 12px 28px rgba(0,0,0,.65);
+        color: var(--ltt-txt);
+        font: 300 11px/1.5 var(--ltt-thai);
+        z-index: 1000001;
+        pointer-events: none;
+        animation: ltt-toast-in .28s cubic-bezier(.2,.9,.3,1.15) both;
+    }
+
+    #${EXT_ID}-toast::before,
+    #${EXT_ID}-toast::after {
+        content: '';
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        background: var(--ltt-bg);
+        border: 1px solid var(--ltt-hi);
+    }
+
+    #${EXT_ID}-toast::before { left: -4px; top: -4px; }
+    #${EXT_ID}-toast::after { right: -4px; bottom: -4px; }
+
+    #${EXT_ID}-toast .ltt-toast-icon {
+        flex: none;
+        display: flex;
+        align-items: center;
+        padding: 0 9px;
+        background: var(--ltt-blue3);
+        border-right: 1px solid var(--ltt-blue);
+        color: var(--ltt-hi);
+        font: 400 7.5px var(--ltt-mono);
+        letter-spacing: .26em;
+        text-transform: uppercase;
+        animation: none;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-icon svg { display: none; }
+
+    #${EXT_ID}-toast .ltt-toast-icon::after {
+        content: 'EXTRA';
+    }
+
+    #${EXT_ID}-toast .ltt-toast-body {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 8px;
+        min-width: 0;
+        padding: 6px 0 6px 10px;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-line {
+        color: var(--ltt-txt);
+        word-break: break-word;
+    }
+
+    #${EXT_ID}-toast .ltt-toast-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: var(--ltt-blue);
+        opacity: .7;
+        transform-origin: left center;
+        animation: ltt-toast-bar var(--ms, 5s) linear both;
+    }
+
+    #${EXT_ID}-toast.ltt-toast-warn {
+        border-color: var(--ltt-blue);
+    }
+
+    #${EXT_ID}-toast.ltt-toast-warn .ltt-toast-icon {
+        background: var(--ltt-blue2);
+        border-right-color: var(--ltt-hi);
+        color: var(--ltt-hi);
+    }
+
+    #${EXT_ID}-toast.ltt-toast-warn .ltt-toast-bar {
+        background: var(--ltt-blue);
+    }
+
+    #${EXT_ID}-toast.ltt-toast-out {
+        animation: ltt-toast-out .26s ease forwards;
+    }
+
+    @keyframes ltt-toast-in {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: none; }
+    }
+
+    @keyframes ltt-toast-out {
+        from { opacity: 1; transform: none; }
+        to   { opacity: 0; transform: translateY(-4px); }
+    }
+
+    @keyframes ltt-toast-bar {
+        from { transform: scaleX(1); }
+        to   { transform: scaleX(0); }
+    }
+
+    @keyframes ltt-card-in {
+        from { opacity: 0; transform: translateY(5px); }
+        to   { opacity: 1; transform: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        #${EXT_ID}-toast, #${EXT_ID}-toast .ltt-toast-bar { animation: none; }
+        ${WINS} .ltt-card { animation: none; }
+    }
+
+    /* ===== หน้าต่างร่วม (Triggers / Search / Write / Dice / Calendar) ===== */
+    ${WINS} {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: 80px;
+        max-width: 270px;
+        max-height: 42vh;
+        margin: 0 auto;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        background:
+            radial-gradient(90% 55% at 100% 0%, rgba(95,115,154,.18), transparent 65%),
+            linear-gradient(180deg, #12151c, #0a0c10);
+        border: 1px solid var(--ltt-line);
+        border-radius: 0;
+        box-shadow: 0 16px 36px rgba(0,0,0,.65);
+        color: var(--ltt-txt);
+        font-family: var(--ltt-thai);
+        font-weight: 300;
+        font-size: 10.5px;
+        line-height: 1.55;
+        z-index: 1000000;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(6px);
+        pointer-events: none;
+        transition: opacity .18s ease, transform .18s ease, visibility .18s;
+    }
+
+    ${WINS}.ltt-visible {
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+    }
+
+    /* มุมกรอบแบบ editorial (สี่เหลี่ยมเล็ก) */
+    ${WINS} .ltt-corner {
+        position: absolute;
+        width: 7px;
+        height: 7px;
+        background: transparent;
+        box-shadow: none;
+        transform: none;
+        pointer-events: none;
+        border: 1px solid var(--ltt-hi);
+    }
+
+    ${WINS} .ltt-c-tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+    ${WINS} .ltt-c-tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+    ${WINS} .ltt-c-bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+    ${WINS} .ltt-c-br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+    /* ซ่อนประกายสี่แฉกแบบเก่า — ใช้เส้นขอบ editorial แทน */
+    ${WINS} .ltt-spk { display: none !important; }
+
+    /* ชื่อหน้าต่าง: ฟอนต์ serif + kicker mono */
+    ${WINS} .ltt-title {
+        position: absolute;
+        top: -11px;
+        left: 14px;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 0 2px;
+        background: var(--ltt-panel);
+        color: var(--ltt-hi);
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        font-family: var(--ltt-serif);
+        font-size: 15px;
+        font-weight: 400;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+
+    ${WINS} .ltt-title svg { display: none; }
+
+    ${WINS} .ltt-title::before {
+        content: attr(data-kicker);
+        font: 400 7px/1 var(--ltt-mono);
+        letter-spacing: .22em;
+        text-transform: uppercase;
+        color: var(--ltt-blue);
+        margin-right: 2px;
+    }
+
+    ${WINS} .ltt-title::after {
+        content: attr(data-no);
+        font: 400 7px/1 var(--ltt-mono);
+        letter-spacing: .14em;
+        color: var(--ltt-mute);
+        margin-left: 4px;
+    }
+
+    ${WINS} .ltt-head {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 0 10px;
+        padding: 14px 0 6px 2px;
+        background: linear-gradient(90deg, var(--ltt-line), var(--ltt-line2) 70%, transparent) left bottom / 100% 1px no-repeat;
+    }
+
+    ${WINS} .ltt-nav {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    ${WINS} .ltt-nav button {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--ltt-line2) !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: var(--ltt-txt);
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background .12s ease, color .12s ease;
+    }
+
+    ${WINS} .ltt-nav button:active {
+        background: var(--ltt-hi) !important;
+        color: var(--ltt-on-hi);
+    }
+
+    ${WINS} .ltt-nav button:disabled { opacity: .28; }
+
+    ${WINS} .ltt-nav .ltt-close {
+        margin-left: 4px;
+        font-size: 10px;
+        color: var(--ltt-dim);
+        position: relative;
+    }
+
+    ${WINS} .ltt-nav .ltt-close::before { display: none; }
+
+    ${WINS} .ltt-nav-label {
+        min-width: 28px;
+        padding: 0 4px;
+        white-space: nowrap;
+        text-align: center;
+        font: 400 10px var(--ltt-mono);
+        letter-spacing: .04em;
+        color: var(--ltt-txt);
+    }
+
+    ${WINS} .ltt-meta {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        padding: 2px 0;
+        color: var(--ltt-dim);
+        font: 300 10px/1.6 var(--ltt-thai);
+        letter-spacing: .02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    ${WINS} .ltt-meta::before {
+        content: '';
+        flex: none;
+        width: 5px;
+        height: 5px;
+        background: var(--ltt-blue2);
+    }
+
+    ${WINS} .ltt-meta:empty { display: none; }
+
+    ${WINS} .ltt-query {
+        flex: none;
+        margin: 6px 12px 0;
+        padding: 2px 0;
+        color: var(--ltt-mute);
+        font-size: 9.5px;
+        line-height: 1.8;
+        white-space: normal;
+        overflow: visible;
+        word-break: break-word;
+    }
+
+    ${WINS} .ltt-query:empty { display: none; }
+
+    ${WINS} .ltt-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 8px 10px 18px;
+        counter-reset: c;
+        -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
+        mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
+        scrollbar-width: thin;
+        scrollbar-color: var(--ltt-blue2) transparent;
+    }
+
+    ${WINS} .ltt-list::-webkit-scrollbar { width: 3px; }
+    ${WINS} .ltt-list::-webkit-scrollbar-track { background: transparent; }
+    ${WINS} .ltt-list::-webkit-scrollbar-thumb { background: var(--ltt-blue2); }
+
+    ${WINS} .ltt-nav button svg {
+        width: 11px;
+        height: 11px;
+        pointer-events: none;
+    }
+
+    ${WINS} .ltt-nav .ltt-move .ltt-tick { display: none; }
+
+    ${WINS} .ltt-nav .ltt-move.ltt-on {
+        background: var(--ltt-hi) !important;
+        color: var(--ltt-on-hi);
+        border-color: var(--ltt-hi) !important;
+    }
+
+    ${WINS} .ltt-nav .ltt-move.ltt-on .ltt-arrows { display: none; }
+    ${WINS} .ltt-nav .ltt-move.ltt-on .ltt-tick { display: block; }
+    ${WINS} .ltt-nav .ltt-reset[hidden] { display: none; }
+
+    ${WINS}.ltt-moving {
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        box-shadow:
+            0 0 0 1px var(--ltt-hi),
+            0 0 18px rgba(143,163,196,.35),
+            0 16px 36px rgba(0,0,0,.65);
+    }
+
+    ${WINS}.ltt-moving.ltt-dragging {
+        cursor: grabbing;
+        transition: none;
+    }
+
+    ${WINS}.ltt-moving .ltt-list {
+        touch-action: none;
+        overflow: hidden;
+    }
+
+    ${WINS} .ltt-note {
+        padding: 14px 4px 8px;
+        color: var(--ltt-dim);
+        text-align: center;
+        font: 300 10px/1.5 var(--ltt-thai);
+    }
+
+    ${WINS} .ltt-note::before {
+        content: '■';
+        display: block;
+        margin-bottom: 6px;
+        color: var(--ltt-blue2);
+        font-size: 8px;
+        line-height: 1;
+    }
+
+    /* การ์ด */
+    ${WINS} .ltt-card {
+        position: relative;
+        flex: none;
+        counter-increment: c;
+        padding: 9px 12px 10px;
+        border: 1px solid var(--ltt-line2);
+        border-radius: 0;
+        background: var(--ltt-card);
+        box-shadow: none;
+        overflow: hidden;
+        animation: ltt-card-in .3s ease both;
+        animation-delay: calc(var(--i, 0) * 45ms);
+    }
+
+    ${WINS} .ltt-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--ltt-line2);
+        opacity: 1;
+    }
+
+    ${WINS} .ltt-card::after {
+        content: counter(c, decimal-leading-zero);
+        position: absolute;
+        right: 8px;
+        bottom: -6px;
+        font: 400 40px/1 var(--ltt-serif);
+        color: transparent;
+        -webkit-text-stroke: 1px rgba(143,163,196,.18);
+        pointer-events: none;
+    }
+
+    ${WINS} .ltt-card.ltt-const {
+        border-color: var(--ltt-blue);
+        background: linear-gradient(160deg, rgba(95,115,154,.22), rgba(95,115,154,.05));
+    }
+
+    ${WINS} .ltt-card.ltt-const::before {
+        background: var(--ltt-blue);
+    }
+
+    ${WINS} .ltt-card.ltt-weak {
+        border-style: dashed;
+        border-color: var(--ltt-mute);
+        background: transparent;
+        opacity: .9;
+    }
+
+    ${WINS} .ltt-card.ltt-weak::before,
+    ${WINS} .ltt-card.ltt-weak::after,
+    ${WINS} .ltt-hit::after {
+        display: none;
+    }
+
+    ${WINS} .ltt-card.ltt-past { opacity: .55; }
+
+    ${WINS} .ltt-card-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    ${WINS} .ltt-num {
+        flex: none;
+        min-width: 22px;
+        padding: 1px 4px;
+        margin-right: 2px;
+        background: var(--ltt-panel);
+        border: 1px solid var(--ltt-line2);
+        color: var(--ltt-blue);
+        font: 400 9px/1.4 var(--ltt-mono);
+        letter-spacing: .04em;
+        text-align: center;
+    }
+
+    ${WINS} .ltt-card.ltt-const .ltt-num {
+        background: var(--ltt-blue3);
+        border-color: var(--ltt-blue);
+        color: var(--ltt-txt);
+    }
+
+    ${WINS} .ltt-book {
+        flex: none;
+        max-width: 42%;
+        padding: 0 7px;
+        background: transparent;
+        color: var(--ltt-blue);
+        border: 1px solid var(--ltt-blue2);
+        border-radius: 0;
+        font: 400 8px/1.8 var(--ltt-mono);
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    ${WINS} .ltt-card-title {
+        flex: 1;
+        min-width: 0;
+        color: var(--ltt-hi);
+        font: 400 12px/1.35 var(--ltt-thai);
+        font-weight: 400;
+        word-break: break-word;
+    }
+
+    ${WINS} .ltt-keys {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        margin-top: 6px;
+    }
+
+    ${WINS} .ltt-keys + .ltt-keys { margin-top: 4px; }
+
+    ${WINS} .ltt-keys-label {
+        flex: none;
+        min-width: 22px;
+        color: var(--ltt-mute);
+        font: 400 7.5px var(--ltt-mono);
+        letter-spacing: .16em;
+        text-transform: uppercase;
+    }
+
+    ${WINS} .ltt-key {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        padding: 0 7px;
+        border: 1px solid var(--ltt-line);
+        border-radius: 0;
+        background: transparent;
+        color: var(--ltt-txt);
+        font: 300 9.5px/16px var(--ltt-thai);
+        word-break: break-word;
+    }
+
+    ${WINS} .ltt-key::before { display: none; }
+
+    ${WINS} .ltt-key.ltt-sec {
+        border-style: dashed;
+        border-color: var(--ltt-mute);
+        background: transparent;
+        color: var(--ltt-dim);
+    }
+
+    ${WINS} .ltt-key.ltt-sec::before { display: none; }
+
+    ${WINS} .ltt-tag {
+        display: block;
+        margin-top: 7px;
+        padding-top: 5px;
+        border-top: 1px solid var(--ltt-line2);
+        color: var(--ltt-dim);
+        font: 300 9.5px/1.5 var(--ltt-thai);
+    }
+
+    ${WINS} .ltt-tag::before { display: none; }
+
+    ${WINS} .ltt-card.ltt-const .ltt-tag {
+        color: var(--ltt-blue);
+    }
+
+    ${WINS} .ltt-status {
+        margin: 4px 0 2px;
+        padding-top: 6px;
+        border-top: 1px solid var(--ltt-line2);
+        color: var(--ltt-mute);
+        font: 400 7.5px/1.7 var(--ltt-mono);
+        letter-spacing: .08em;
+        text-align: left;
+    }
+
+    ${WINS} .ltt-status::before {
+        content: '■ ';
+        color: var(--ltt-blue2);
+        font-size: 6px;
+        vertical-align: 1px;
+    }
+
+    /* Search / shared controls */
+    ${WINS} .ltt-search-box {
+        flex: none;
+        margin: 10px 12px 0;
+    }
+
+    ${WINS} .ltt-search-input {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 4px 2px 5px;
+        border: 0;
+        border-bottom: 1px solid var(--ltt-line);
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        color: var(--ltt-hi);
+        font: 300 12px var(--ltt-thai);
+        line-height: 1.6;
+        outline: none;
+    }
+
+    ${WINS} .ltt-search-input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+    ${WINS} .ltt-search-input::placeholder { color: var(--ltt-mute); }
+    ${WINS} .ltt-search-input:focus { border-bottom-color: var(--ltt-hi); }
+
+    ${WINS} .ltt-hit { cursor: pointer; }
+    ${WINS} .ltt-spacer { flex: 1; }
+
+    ${WINS} .ltt-snip {
+        margin-top: 7px;
+        color: var(--ltt-txt);
+        font: 300 10.5px/1.6 var(--ltt-thai);
+        word-break: break-word;
+    }
+
+    ${WINS} .ltt-snip mark {
+        padding: 0 2px;
+        border-radius: 0;
+        background: var(--ltt-blue3);
+        color: var(--ltt-hi);
+        box-shadow: inset 0 -1px 0 var(--ltt-blue);
+    }
+
+    ${WINS} .ltt-snip-full { color: var(--ltt-dim); }
+    ${WINS} .ltt-snip-tap { cursor: pointer; }
+
+    ${WINS} .ltt-act {
+        -webkit-appearance: none;
+        appearance: none;
+        flex: none;
+        margin: 0;
+        padding: 0 1px;
+        border: 0 !important;
+        border-bottom: 1px solid var(--ltt-line) !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: var(--ltt-txt);
+        font: 400 7.5px/14px var(--ltt-mono);
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    ${WINS} .ltt-act:active {
+        background: var(--ltt-hi) !important;
+        color: var(--ltt-on-hi);
+    }
+
+    ${WINS} .ltt-act.ltt-confirm {
+        background: var(--ltt-blue3) !important;
+        color: var(--ltt-txt);
+        border-color: var(--ltt-blue) !important;
+        border-bottom-width: 1px !important;
+        padding: 0 6px;
+    }
+
+    ${WINS} .ltt-roll-act {
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    /* ===== Write ===== */
+    #${WRITE_ID} {
+        width: fit-content;
+        max-width: min(300px, calc(100vw - 16px));
+    }
+
+    #${WRITE_ID} .ltt-spk,
+    #${WRITE_ID} .ltt-c-tr { display: none; }
+
+    #${WRITE_ID} .ltt-head { display: contents; }
+
+    #${WRITE_ID} .ltt-meta {
+        position: absolute;
+        top: -7px;
+        right: 18px;
+        z-index: 3;
+        flex: none;
+        padding: 0 6px;
+        overflow: visible;
+        background: var(--ltt-panel);
+        border: 1px solid var(--ltt-line2);
+        border-radius: 0;
+        color: var(--ltt-dim);
+        font: 400 7px/12px var(--ltt-mono);
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+
+    #${WRITE_ID} .ltt-meta::before { display: none; }
+
+    #${WRITE_ID} .ltt-nav {
+        position: absolute;
+        top: -9px;
+        right: -1px;
+        z-index: 4;
+        padding: 0;
+        border: 0;
+        background: none;
+    }
+
+    #${WRITE_ID} .ltt-nav .ltt-close {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        border: 1px solid var(--ltt-line) !important;
+        background: var(--ltt-panel) !important;
+        box-shadow: none !important;
+        color: var(--ltt-txt);
+        font-size: 9px;
+    }
+
+    #${WRITE_ID} .ltt-nav .ltt-close::before { display: none; }
+
+    #${WRITE_ID} .ltt-row {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 14px 10px 10px;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+
+    #${WRITE_ID} .ltt-row::-webkit-scrollbar { display: none; }
+
+    #${WRITE_ID} .ltt-tool,
+    ${TOOLWINS} .ltt-tool {
+        -webkit-appearance: none;
+        appearance: none;
+        flex: none;
+        min-width: 23px;
+        height: 24px;
+        margin: 0;
+        padding: 0 5px;
+        border: 1px solid var(--ltt-line) !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: var(--ltt-txt);
+        font: 400 11px/1 var(--ltt-mono);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        filter: grayscale(1);
+        transition: background .1s, color .1s, filter .1s;
+    }
+
+    #${WRITE_ID} .ltt-tool:active,
+    ${TOOLWINS} .ltt-tool:active {
+        background: var(--ltt-hi) !important;
+        color: var(--ltt-on-hi);
+        filter: none;
+    }
+
+    #${WRITE_ID} .ltt-tool.ltt-on,
+    ${TOOLWINS} .ltt-tool.ltt-on {
+        background: var(--ltt-blue3) !important;
+        border-color: var(--ltt-blue) !important;
+        color: var(--ltt-hi);
+        filter: none;
+    }
+
+    #${WRITE_ID} .ltt-tool.ltt-sym { color: var(--ltt-blue); filter: none; }
+
+    #${WRITE_ID} .ltt-tool.ltt-open {
+        border-color: var(--ltt-hi) !important;
+        background: rgba(223,226,232,.08) !important;
+        filter: none;
+    }
+
+    #${WRITE_ID} .ltt-name {
+        max-width: 64px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font: 300 10px var(--ltt-thai);
+        filter: none;
+    }
+
+    #${WRITE_ID} .ltt-sep {
+        flex: none;
+        width: 1px;
+        height: 18px;
+        margin: 0 2px;
+        background: var(--ltt-line2);
+    }
+
+    #${WRITE_ID} .ltt-grp {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    #${WRITE_ID} .ltt-grp .ltt-tool { border-right-width: 0 !important; }
+
+    #${WRITE_ID} .ltt-lvl {
+        display: inline-flex;
+        height: 24px;
+        border: 1px solid var(--ltt-line);
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    #${WRITE_ID} .ltt-lvl button {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 17px;
+        min-width: 17px;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0 !important;
+        border-left: 1px solid var(--ltt-line2) !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: var(--ltt-dim);
+        font: 400 8.5px var(--ltt-mono);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #${WRITE_ID} .ltt-lvl button:first-child { border-left: 0 !important; }
+
+    #${WRITE_ID} .ltt-lvl button.ltt-sel,
+    #${WRITE_ID} .ltt-lvl button.ltt-on {
+        background: var(--ltt-blue3) !important;
+        color: var(--ltt-hi);
+    }
+
+    #${WRITE_ID} .ltt-fly {
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 12px);
+        transform: translateX(-50%);
+        box-sizing: border-box;
+        max-width: calc(100vw - 16px);
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        padding: 5px 7px;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        background: rgba(8,9,12,.92);
+        border: 1px solid var(--ltt-line);
+        border-radius: 0;
+        box-shadow: 0 8px 18px rgba(0,0,0,.55);
+    }
+
+    #${WRITE_ID} .ltt-fly::before,
+    #${WRITE_ID} .ltt-fly::after {
+        content: '';
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        background: var(--ltt-bg);
+        border: 1px solid var(--ltt-hi);
+    }
+
+    #${WRITE_ID} .ltt-fly::before { left: -4px; top: -4px; }
+    #${WRITE_ID} .ltt-fly::after { right: -4px; bottom: -4px; }
+
+    #${WRITE_ID} .ltt-fly::-webkit-scrollbar { display: none; }
+    #${WRITE_ID} .ltt-fly[hidden] { display: none; }
+    #${WRITE_ID} .ltt-fly .ltt-tool { min-width: 22px; height: 22px; padding: 0 4px; filter: none; }
+
+    /* ===== Dice / Calendar tool bars ===== */
     ${TOOLWINS} .ltt-dice-ctl,
     ${TOOLWINS} .ltt-cal-top { flex: none; }
 
@@ -1382,631 +1306,335 @@ function addStyles() {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        gap: 4px;
-        margin: 8px 8px 0;
+        gap: 5px;
+        margin: 9px 10px 0;
     }
 
     ${TOOLWINS} .ltt-bar.ltt-bar-in { margin: 0; }
 
     ${TOOLWINS} .ltt-hint {
-        color: #bfaeb6;
-        font-size: 9.5px;
-        line-height: 1.6;
-    }
-
-    ${TOOLWINS} .ltt-tool {
-        -webkit-appearance: none;
-        appearance: none;
-        flex: none;
-        min-width: 24px;
-        height: 22px;
-        margin: 0;
-        padding: 0 7px;
-        border: 1px solid rgba(246,232,226,.4) !important;
-        border-radius: 5px !important;
-        background: rgba(246,232,226,.09) !important;
-        box-shadow: none !important;
-        color: #f6e8e2;
-        font-family: inherit;
-        font-size: 11px;
-        line-height: 1;
-        white-space: nowrap;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background .15s ease, border-color .15s ease;
-    }
-
-    ${TOOLWINS} .ltt-tool:active { background: rgba(246,232,226,.28) !important; }
-
-    ${TOOLWINS} .ltt-tool.ltt-on {
-        border-color: #f6e8e2 !important;
-        background: #c42b48 !important;
-        color: #fff;
+        color: var(--ltt-dim);
+        font: 300 9px var(--ltt-thai);
+        line-height: 1.5;
     }
 
     ${TOOLWINS} .ltt-tool.ltt-confirm,
     ${TOOLWINS} .ltt-tool.ltt-danger {
-        border-color: #e0788a !important;
-        background: #b3243f !important;
-        color: #fff;
+        border-color: var(--ltt-blue) !important;
+        color: var(--ltt-hi);
+        filter: none;
     }
 
-    ${TOOLWINS} .ltt-step { min-width: 22px; padding: 0 5px; font-size: 14px; }
-
-    ${TOOLWINS} .ltt-grow { flex: 1 1 80px; width: auto; min-width: 0; }
-    ${TOOLWINS} .ltt-time { flex: none; width: 84px; }
-
-    ${TOOLWINS} .ltt-bar .ltt-search-input {
-        height: 24px;
-        padding: 2px 8px;
-        font-size: 11.5px;
-        line-height: 1.4;
-        color-scheme: dark;
+    ${TOOLWINS} .ltt-tool.ltt-danger {
+        border-color: var(--ltt-line) !important;
+        color: var(--ltt-txt);
     }
 
-    ${TOOLWINS} .ltt-search-input[type="date"],
-    ${TOOLWINS} .ltt-search-input[type="time"] { color-scheme: dark; }
-
-    #${DICE_ID} .ltt-area {
-        display: block;
-        min-height: 96px;
-        resize: none;
-        line-height: 1.6;
+    ${TOOLWINS} .ltt-bar .ltt-tool,
+    ${TOOLWINS} .ltt-chip,
+    ${TOOLWINS} .ltt-chip-edit {
+        font: 400 8.5px/1 var(--ltt-mono);
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        height: 21px;
+        padding: 0 7px;
+        filter: none;
     }
 
-    /* ปุ่มตารางสุ่ม: ชื่อ + ดินสอแก้ไข ติดกันเป็นก้อนเดียว */
-    #${DICE_ID} .ltt-grp2 { display: inline-flex; max-width: 100%; }
-
-    #${DICE_ID} .ltt-chip {
-        max-width: 118px;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    ${TOOLWINS} .ltt-grp2 {
+        display: inline-flex;
     }
 
-    #${DICE_ID} .ltt-grp2 .ltt-chip {
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
+    ${TOOLWINS} .ltt-grp2 .ltt-chip {
         border-right-width: 0 !important;
     }
 
-    #${DICE_ID} .ltt-chip-edit {
-        min-width: 22px;
-        padding: 0 4px;
-        border-top-left-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-        color: #e0788a;
+    ${TOOLWINS} .ltt-grp2 .ltt-chip-edit {
+        min-width: 20px;
+        padding: 0;
     }
 
-    /* ผลทอย: ใบล่าสุดเด่น ใบเก่าไม่เล่นแอนิเมชันซ้ำ */
-    #${DICE_ID} .ltt-roll { animation: none; }
-
-    #${DICE_ID} .ltt-roll.ltt-latest {
-        animation: ltt-card-in .3s ease both;
-        border-color: rgba(246,232,226,.7);
+    ${TOOLWINS} .ltt-grow {
+        flex: 1;
+        min-width: 0;
+        width: auto;
     }
 
-    #${DICE_ID} .ltt-roll-text {
-        color: #fff;
-        font-size: 12.5px;
-        font-weight: 600;
-        line-height: 1.55;
-        word-break: break-word;
+    ${TOOLWINS} .ltt-area {
+        min-height: 90px;
+        resize: vertical;
+        font: 300 11px/1.55 var(--ltt-thai) !important;
     }
 
-    ${TOOLWINS} .ltt-roll-act { margin-top: 5px; }
+    ${TOOLWINS} .ltt-roll-text {
+        text-align: center;
+        margin-top: 2px;
+        font: 300 12px/1.5 var(--ltt-thai);
+    }
 
-    /* ปฏิทิน: กว้างขึ้นให้ตารางรายเดือนพอดี (ไม่เกินจอ) */
-    #${CAL_ID} { max-width: min(352px, calc(100vw - 16px)); }
+    ${TOOLWINS} .ltt-roll-text b,
+    ${TOOLWINS} .ltt-card.ltt-latest .ltt-roll-text {
+        font-family: var(--ltt-serif);
+    }
+
+    ${TOOLWINS} .ltt-card.ltt-latest {
+        border-color: var(--ltt-blue);
+    }
+
+    /* ===== Calendar ===== */
+    #${CAL_ID} {
+        max-height: 84vh;
+    }
 
     #${CAL_ID} .ltt-month-nav {
         display: flex;
         align-items: center;
-        gap: 4px;
-        margin: 8px 8px 0;
+        justify-content: space-between;
+        gap: 6px;
+        margin: 4px 0 7px;
+    }
+
+    #${CAL_ID} .ltt-month-nav .ltt-step,
+    #${CAL_ID} .ltt-nav-btn {
+        appearance: none;
+        width: 20px;
+        height: 19px;
+        padding: 0;
+        border: 1px solid var(--ltt-line) !important;
+        background: transparent !important;
+        color: var(--ltt-txt);
+        font: 300 12px/1 var(--ltt-thai);
+        border-radius: 0 !important;
     }
 
     #${CAL_ID} .ltt-month-title {
-        -webkit-appearance: none;
-        appearance: none;
         flex: 1;
-        margin: 0;
-        padding: 2px 0;
-        border: 0 !important;
-        background: none !important;
-        box-shadow: none !important;
-        color: #fff;
-        font-family: Georgia, 'Times New Roman', serif;
-        font-size: 13.5px;
-        letter-spacing: .05em;
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--ltt-hi);
+        font: 400 16px var(--ltt-serif), var(--ltt-thai);
+        letter-spacing: .06em;
+        text-transform: uppercase;
         text-align: center;
         cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
     }
 
     #${CAL_ID} .ltt-wk {
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 3px;
-        margin: 6px 8px 0;
-        color: #bfaeb6;
-        font-size: 9px;
-        letter-spacing: .06em;
+        grid-template-columns: repeat(7, 1fr);
+        border-top: 1px solid var(--ltt-line);
+        border-bottom: 1px solid var(--ltt-line2);
+        padding: 3px 0;
         text-align: center;
+        font: 400 7.5px var(--ltt-mono);
+        letter-spacing: .12em;
+        color: var(--ltt-dim);
     }
 
-    #${CAL_ID} .ltt-wk .ltt-we { color: #e0788a; }
+    #${CAL_ID} .ltt-wk .ltt-we { color: var(--ltt-blue); }
 
     #${CAL_ID} .ltt-grid {
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 3px;
-        margin: 4px 8px 0;
+        grid-template-columns: repeat(7, 1fr);
+        border-left: 1px solid var(--ltt-line2);
+    }
+
+    #${CAL_ID} .ltt-day,
+    #${CAL_ID} .ltt-day-blank {
+        min-height: 36px;
+        border-right: 1px solid var(--ltt-line2);
+        border-bottom: 1px solid var(--ltt-line2);
+    }
+
+    #${CAL_ID} .ltt-day-blank {
+        background: linear-gradient(135deg, transparent 49%, var(--ltt-line2) 49.5%, var(--ltt-line2) 50.5%, transparent 51%);
+        opacity: .5;
     }
 
     #${CAL_ID} .ltt-day {
-        -webkit-appearance: none;
         appearance: none;
+        padding: 2px 1px;
+        margin: 0;
+        border-top: 0;
+        border-left: 0;
+        border-radius: 0;
+        background: transparent;
+        color: var(--ltt-txt);
         display: flex;
         flex-direction: column;
         align-items: stretch;
         gap: 1px;
-        min-height: 46px;
-        margin: 0;
-        padding: 2px 3px;
-        overflow: hidden;
-        border: 1px solid rgba(246,232,226,.26) !important;
-        border-radius: 4px !important;
-        background: rgba(246,232,226,.06) !important;
-        box-shadow: none !important;
-        color: #f6e8e2;
-        font-family: inherit;
-        text-align: left;
+        text-align: center;
         cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    #${CAL_ID} .ltt-day:active { background: rgba(246,232,226,.22) !important; }
-
-    #${CAL_ID} .ltt-day.ltt-picked {
-        border-color: #f6e8e2 !important;
-        background: rgba(246,232,226,.2) !important;
     }
 
     #${CAL_ID} .ltt-day-n {
-        align-self: flex-start;
-        min-width: 14px;
-        padding: 0 2px;
-        border: 1.5px solid transparent;
-        border-radius: 999px;
-        font-family: Georgia, 'Times New Roman', serif;
-        font-size: 9.5px;
-        line-height: 1.25;
-        text-align: center;
+        font: 400 9px/1.3 var(--ltt-mono);
     }
 
-    #${CAL_ID} .ltt-day.ltt-we .ltt-day-n { color: #e0788a; }
+    #${CAL_ID} .ltt-day.ltt-we .ltt-day-n { color: var(--ltt-blue); }
 
-    /* วันนี้ในเรื่อง = วงกลมแดงล้อมเลข */
     #${CAL_ID} .ltt-day.ltt-today .ltt-day-n {
-        border-color: #e0586f;
-        color: #fff;
+        align-self: center;
+        min-width: 15px;
+        background: var(--ltt-hi);
+        color: var(--ltt-on-hi);
+    }
+
+    #${CAL_ID} .ltt-day.ltt-picked {
+        box-shadow: inset 0 0 0 1px var(--ltt-blue);
+        background: rgba(95,115,154,.14);
     }
 
     #${CAL_ID} .ltt-day-ev {
         display: block;
-        max-width: 100%;
         overflow: hidden;
+        margin: 0 1px;
         padding: 0 2px;
-        border-radius: 2px;
-        font-size: 7.5px;
-        line-height: 1.35;
-        text-overflow: ellipsis;
         white-space: nowrap;
+        text-overflow: ellipsis;
+        font: 300 6.5px/10px var(--ltt-thai);
     }
 
-    #${CAL_ID} .ltt-ev-ok { background: #c42b48; color: #fff; }
-    #${CAL_ID} .ltt-ev-new { border: 1px dashed rgba(246,232,226,.6); color: #f6e8e2; }
-    #${CAL_ID} .ltt-day-more { color: #bfaeb6; font-size: 7.5px; line-height: 1.3; }
+    #${CAL_ID} .ltt-ev-ok {
+        background: var(--ltt-blue3);
+        color: var(--ltt-hi);
+        border-left: 1px solid var(--ltt-blue);
+    }
+
+    #${CAL_ID} .ltt-ev-new {
+        border: 1px dashed var(--ltt-blue2);
+        color: var(--ltt-blue);
+    }
+
+    #${CAL_ID} .ltt-day-more {
+        font: 400 7px var(--ltt-mono);
+        color: var(--ltt-mute);
+    }
 
     #${CAL_ID} .ltt-day-head {
         display: flex;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 4px;
-        margin: 10px 8px 0;
+        gap: 6px;
+        margin: 12px 0 8px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid var(--ltt-line2);
     }
 
     #${CAL_ID} .ltt-day-title {
-        flex: 1 1 auto;
-        color: #fff;
-        font-family: Georgia, 'Times New Roman', serif;
-        font-size: 11.5px;
-        letter-spacing: .03em;
+        flex: 1;
+        font: 400 13px var(--ltt-serif), var(--ltt-thai);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--ltt-hi);
     }
 
-    #${CAL_ID} .ltt-day-tools { display: inline-flex; gap: 4px; }
-
-    /* ปฏิทิน */
-    #${CAL_ID} .ltt-book { max-width: none; }
-    #${CAL_ID} .ltt-card-top { flex-wrap: wrap; }
-    #${CAL_ID} .ltt-card.ltt-past { opacity: .6; }
-    #${CAL_ID} .ltt-snip-tap { cursor: pointer; }
-    #${CAL_ID} .ltt-snip-full { opacity: .75; font-style: italic; }
-
-    #${CAL_ID} .ltt-card.ltt-cal-edit {
+    #${CAL_ID} .ltt-day-tools {
         display: flex;
-        flex-direction: column;
-        gap: 5px;
-        opacity: 1;
+        gap: 6px;
     }
 
-    #${CAL_ID} .ltt-cal-edit .ltt-search-input { width: 100%; box-sizing: border-box; }
-    #${CAL_ID} .ltt-cal-edit .ltt-bar .ltt-grow { width: auto; }
-    #${CAL_ID} .ltt-cal-edit .ltt-bar .ltt-time { width: 84px; }
-
-    /* ============================================================
-     * ปฏิทิน: ธีมกระดาษ (ครีม / ฟ้า / ชมพู / ดำ) ทับสไตล์ไวน์แดงของหน้าต่างอื่น
-     * ============================================================ */
-    #${CAL_ID} {
-        --p-paper: #f6eedf;
-        --p-cell: rgba(255,255,255,.55);
-        --p-ink: #3d312b;
-        --p-ink-a: rgba(61,49,43,.55);
-        --p-soft: #8a7868;
-        --p-rule: #d3c0a0;
-        --p-accent: #b3243f;
-        --p-accent-rgb: 179,36,63;
-        --p-on: #fff7f0;
-        --p-weekend: #c0463a;
-        --p-pick: rgba(247,226,122,.5);
-        --p-hl0: #f7e27a;
-        --p-hl1: #a6dfd4;
-        --p-hl2: #f6bcc6;
-        --p-chip-ink: #3d312b;
-        --p-grain: .09;
+    #${CAL_ID} .ltt-swatches {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
     }
 
-    #${CAL_ID}[data-cal-theme="sky"] {
-        --p-paper: #edf3fa;
-        --p-cell: rgba(255,255,255,.72);
-        --p-ink: #1f3a6b;
-        --p-ink-a: rgba(31,58,107,.5);
-        --p-soft: #6f84ab;
-        --p-rule: #b4c5df;
-        --p-accent: #d43b3b;
-        --p-accent-rgb: 212,59,59;
-        --p-weekend: #d43b3b;
-        --p-pick: rgba(188,215,247,.65);
-        --p-hl0: #bcd7f7;
-        --p-hl1: #f9e48a;
-        --p-hl2: #cfe9d4;
-        --p-chip-ink: #1f3a6b;
+    #${CAL_ID} .ltt-sw {
+        appearance: none;
+        width: 13px;
+        height: 13px;
+        padding: 0;
+        border-radius: 0;
+        border: 1px solid var(--ltt-line);
+        cursor: pointer;
     }
 
-    #${CAL_ID}[data-cal-theme="rose"] {
-        --p-paper: #fbeeee;
-        --p-cell: rgba(255,255,255,.62);
-        --p-ink: #5a2e3a;
-        --p-ink-a: rgba(90,46,58,.5);
-        --p-soft: #a07a85;
-        --p-rule: #e8c3ca;
-        --p-accent: #c2335a;
-        --p-accent-rgb: 194,51,90;
-        --p-weekend: #c2335a;
-        --p-pick: rgba(249,201,212,.7);
-        --p-hl0: #f9c9d4;
-        --p-hl1: #ffe49a;
-        --p-hl2: #c9e4f5;
-        --p-chip-ink: #5a2e3a;
+    #${CAL_ID} .ltt-sw-cream,
+    #${CAL_ID} .ltt-sw-noir { background: #0d0f13; }
+    #${CAL_ID} .ltt-sw-sky,
+    #${CAL_ID} .ltt-sw-slate { background: #1a2233; }
+    #${CAL_ID} .ltt-sw-rose,
+    #${CAL_ID} .ltt-sw-smoke { background: #2a2c31; }
+    #${CAL_ID} .ltt-sw-night,
+    #${CAL_ID} .ltt-sw-pale { background: #cfd3da; }
+
+    #${CAL_ID} .ltt-sw-on {
+        box-shadow: 0 0 0 2px #0b0d11, 0 0 0 3px var(--ltt-blue);
     }
 
-    #${CAL_ID}[data-cal-theme="night"] {
-        --p-paper: #1d1b1e;
-        --p-cell: rgba(255,255,255,.05);
-        --p-ink: #ece4e0;
-        --p-ink-a: rgba(236,228,224,.5);
-        --p-soft: #a69c9a;
-        --p-rule: #4c4044;
-        --p-accent: #e0455a;
-        --p-accent-rgb: 224,69,90;
-        --p-on: #fff;
-        --p-weekend: #e0788a;
-        --p-pick: rgba(217,194,90,.28);
-        --p-hl0: #d9c25a;
-        --p-hl1: #6fb7ab;
-        --p-hl2: #d98a99;
-        --p-chip-ink: #1d1b1e;
-        --p-grain: .16;
-    }
-
-    /* กระดาษ: พื้นสี + เม็ดกระดาษจาง ๆ + แสงนุ่มที่มุม */
-    #${CAL_ID} {
-        border: 1px solid var(--p-rule);
-        border-radius: 6px;
-        background-color: var(--p-paper);
-        background-image:
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .2 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E"),
-            radial-gradient(110% 60% at 100% 0%, rgba(255,255,255,.35), transparent 60%),
-            radial-gradient(90% 55% at 0% 100%, rgba(var(--p-accent-rgb), .07), transparent 65%);
-        background-blend-mode: multiply, normal, normal;
-        color: var(--p-ink);
-        box-shadow: 0 14px 30px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.35);
-    }
-
-    #${CAL_ID}[data-cal-theme="night"] {
-        background-blend-mode: screen, normal, normal;
-        box-shadow: 0 14px 30px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
-    }
-
-    #${CAL_ID}::before { border: 1px dashed var(--p-rule); border-radius: 4px; }
-
-    /* มุม: คลิปหนีบทองสองอันด้านบน / จุดแดงด้านล่าง ประกายเอาออก */
-    #${CAL_ID} .ltt-spk { display: none; }
-
-    #${CAL_ID} .ltt-c-tl,
-    #${CAL_ID} .ltt-c-tr {
-        top: -10px;
-        width: 30px;
-        height: 16px;
-        border-radius: 3px 3px 6px 6px;
+    /* ธีมปฏิทิน (map ชื่อเดิม → โทน noir) */
+    #${CAL_ID}[data-cal-theme="sky"],
+    #${CAL_ID}[data-theme="slate"] {
         background:
-            linear-gradient(90deg, transparent 0 7px, rgba(0,0,0,.16) 7px 8px, transparent 8px 22px, rgba(0,0,0,.16) 22px 23px, transparent 23px),
-            linear-gradient(180deg, #f3d77f 0%, #d4a63a 52%, #a67a1c 100%);
-        box-shadow: 0 2px 3px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.55);
-        transform: none;
+            radial-gradient(90% 55% at 100% 0%, rgba(120,145,190,.25), transparent 65%),
+            linear-gradient(180deg, #172033, #0d1220);
     }
 
-    #${CAL_ID} .ltt-c-tl { left: 44%; right: auto; }
-    #${CAL_ID} .ltt-c-tr { left: auto; right: 14%; }
-
-    #${CAL_ID} .ltt-c-bl,
-    #${CAL_ID} .ltt-c-br {
-        background: var(--p-accent);
-        box-shadow: 0 0 0 1.5px var(--p-paper);
+    #${CAL_ID}[data-cal-theme="rose"],
+    #${CAL_ID}[data-theme="smoke"] {
+        background: linear-gradient(180deg, #2b2d33, #17181c);
     }
 
-    /* ป้ายชื่อหน้าต่าง */
-    #${CAL_ID} .ltt-title {
-        background: var(--p-accent);
-        color: var(--p-on);
-        border-color: rgba(0,0,0,.25);
-        box-shadow: 0 0 0 2px var(--p-paper), 0 2px 6px rgba(0,0,0,.3);
+    #${CAL_ID}[data-cal-theme="night"],
+    #${CAL_ID}[data-theme="pale"] {
+        --ltt-bg: #d4d7dd;
+        --ltt-txt: #14161b;
+        --ltt-hi: #0e1015;
+        --ltt-on-hi: #e6e8ec;
+        --ltt-dim: #4a505c;
+        --ltt-mute: #777d89;
+        --ltt-line: rgba(14,16,21,.7);
+        --ltt-line2: rgba(14,16,21,.25);
+        --ltt-blue: #3d507a;
+        --ltt-blue2: #55688f;
+        --ltt-blue3: #b7c0d4;
+        --ltt-card: rgba(0,0,0,.04);
+        background:
+            radial-gradient(90% 55% at 100% 0%, rgba(255,255,255,.55), transparent 65%),
+            linear-gradient(180deg, #dcdfe5, #c3c7ce);
+        color: var(--ltt-txt);
     }
 
-    #${CAL_ID} .ltt-title svg { color: var(--p-on); }
-
-    #${CAL_ID} .ltt-head {
-        background: linear-gradient(90deg, var(--p-accent), rgba(var(--p-accent-rgb), .1) 75%, transparent) left bottom / 100% 1px no-repeat;
-    }
-
-    #${CAL_ID} .ltt-meta { color: var(--p-soft); }
-    #${CAL_ID} .ltt-meta::before { color: var(--p-accent); }
-
-    #${CAL_ID} .ltt-nav {
-        border-color: var(--p-rule);
+    #${CAL_ID}[data-cal-theme="night"] .ltt-card,
+    #${CAL_ID}[data-theme="pale"] .ltt-card {
         background: rgba(255,255,255,.35);
     }
 
-    #${CAL_ID}[data-cal-theme="night"] .ltt-nav { background: rgba(255,255,255,.06); }
-
-    #${CAL_ID} .ltt-nav button { color: var(--p-ink); }
-    #${CAL_ID} .ltt-nav .ltt-close { color: var(--p-accent); }
-    #${CAL_ID} .ltt-nav .ltt-close::before { background: var(--p-rule); }
-
-    #${CAL_ID} .ltt-list {
-        scrollbar-color: var(--p-rule) transparent;
+    #${CAL_ID}[data-cal-theme="night"] .ltt-num,
+    #${CAL_ID}[data-theme="pale"] .ltt-num {
+        background: #d4d7dd;
     }
 
-    #${CAL_ID} .ltt-list::-webkit-scrollbar-thumb { background: var(--p-rule); }
-
-    #${CAL_ID} .ltt-hint { color: var(--p-soft); }
-
-    #${CAL_ID} .ltt-note { color: var(--p-soft); }
-    #${CAL_ID} .ltt-note::before { color: var(--p-accent); }
-
-    /* ปุ่ม / ช่องกรอก */
-    #${CAL_ID} .ltt-tool {
-        border: 1px solid var(--p-ink-a) !important;
-        background: rgba(255,255,255,.28) !important;
-        color: var(--p-ink);
+    #${CAL_ID}[data-cal-theme="night"] .ltt-ev-ok,
+    #${CAL_ID}[data-theme="pale"] .ltt-ev-ok {
+        color: #0e1015;
     }
 
-    #${CAL_ID}[data-cal-theme="night"] .ltt-tool { background: rgba(255,255,255,.05) !important; }
+    /* highlight สีปากกาในปฏิทิน */
+    #${CAL_ID} .ltt-hl-0 { border-left-color: var(--ltt-blue); }
+    #${CAL_ID} .ltt-hl-1 { border-left-color: #a8b8d4; }
+    #${CAL_ID} .ltt-hl-2 { border-left-color: #6d7f9e; }
 
-    #${CAL_ID} .ltt-tool:active { background: rgba(var(--p-accent-rgb), .2) !important; }
-
-    #${CAL_ID} .ltt-tool.ltt-on {
-        border-color: var(--p-accent) !important;
-        background: var(--p-accent) !important;
-        color: var(--p-on);
+    /* flash ข้อความตอนกระโดดไปหา */
+    .ltt-flash {
+        outline: 1px solid var(--ltt-blue) !important;
+        box-shadow: 0 0 0 3px rgba(143,163,196,.25) !important;
+        transition: outline .2s, box-shadow .2s;
     }
 
-    #${CAL_ID} .ltt-tool.ltt-confirm,
-    #${CAL_ID} .ltt-tool.ltt-danger {
-        border-color: var(--p-accent) !important;
-        background: var(--p-accent) !important;
-        color: var(--p-on);
-    }
-
-    #${CAL_ID} .ltt-search-input {
-        border: 1px solid var(--p-rule) !important;
-        background: rgba(255,255,255,.6) !important;
-        color: var(--p-ink) !important;
-        caret-color: var(--p-accent);
-    }
-
-    #${CAL_ID}[data-cal-theme="night"] .ltt-search-input { background: rgba(255,255,255,.07) !important; }
-    #${CAL_ID} .ltt-search-input::placeholder { color: var(--p-soft); }
-
-    #${CAL_ID} .ltt-search-input[type="date"],
-    #${CAL_ID} .ltt-search-input[type="time"] { color-scheme: light; }
-    #${CAL_ID}[data-cal-theme="night"] .ltt-search-input[type="date"],
-    #${CAL_ID}[data-cal-theme="night"] .ltt-search-input[type="time"] { color-scheme: dark; }
-
-    /* ปุ่มเลือกสีกระดาษ */
-    #${CAL_ID} .ltt-swatches { display: inline-flex; gap: 4px; margin-left: auto; }
-
-    #${CAL_ID} .ltt-sw {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 15px;
-        height: 15px;
-        margin: 0;
-        padding: 0;
-        border: 1.5px solid var(--p-ink-a) !important;
-        border-radius: 50% !important;
-        box-shadow: none !important;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    #${CAL_ID} .ltt-sw-cream { background: #f6eedf !important; }
-    #${CAL_ID} .ltt-sw-sky { background: #bcd7f7 !important; }
-    #${CAL_ID} .ltt-sw-rose { background: #f6bcc6 !important; }
-    #${CAL_ID} .ltt-sw-night { background: #1d1b1e !important; }
-
-    #${CAL_ID} .ltt-sw.ltt-sw-on {
-        border-color: var(--p-accent) !important;
-        box-shadow: 0 0 0 2px var(--p-paper), 0 0 0 3.5px var(--p-accent) !important;
-    }
-
-    /* หัวเดือน + แถบเส้นแบบสมุดปฏิทิน */
-    #${CAL_ID} .ltt-month-title {
-        color: var(--p-ink);
-        font-size: 15px;
-        letter-spacing: .08em;
-    }
-
-    #${CAL_ID} .ltt-bars {
-        display: flex;
-        justify-content: center;
-        gap: 3px;
-        margin: 1px 0 0;
-    }
-
-    #${CAL_ID} .ltt-bars i {
-        display: block;
-        width: 26px;
-        height: 3px;
-        border-radius: 1px;
-        background: var(--p-rule);
-    }
-
-    #${CAL_ID} .ltt-bars i:first-child { background: var(--p-accent); }
-
-    #${CAL_ID} .ltt-wk { color: var(--p-soft); font-family: Georgia, 'Times New Roman', serif; }
-    #${CAL_ID} .ltt-wk .ltt-we { color: var(--p-weekend); }
-
-    /* ช่องวัน: กระดาษซ้อนกรอบบาง */
-    #${CAL_ID} .ltt-day {
-        border: 1px solid var(--p-rule) !important;
-        background: var(--p-cell) !important;
-        color: var(--p-ink);
-        box-shadow: 0 1px 0 rgba(0,0,0,.05) !important;
-    }
-
-    #${CAL_ID} .ltt-day:active { background: var(--p-pick) !important; }
-
-    #${CAL_ID} .ltt-day.ltt-picked {
-        border-color: var(--p-ink-a) !important;
-        background: var(--p-pick) !important;
-    }
-
-    #${CAL_ID} .ltt-day-n { color: var(--p-ink); }
-    #${CAL_ID} .ltt-day.ltt-we .ltt-day-n { color: var(--p-weekend); }
-
-    /* วันนี้ในเรื่อง = วงปากกาแดงวาดมือ (เอียงนิด ๆ ไม่กลมเป๊ะ) */
-    #${CAL_ID} .ltt-day.ltt-today .ltt-day-n {
-        border: 1.6px solid var(--p-accent);
-        border-radius: 52% 48% 56% 44% / 46% 56% 44% 54%;
-        padding: 0 3px;
-        color: var(--p-accent);
-        font-weight: 700;
-        transform: rotate(-7deg);
-    }
-
-    /* รายการในช่อง: แถบปากกาเน้นข้อความ (เหลือง/เขียวมิ้นต์/ชมพู) */
-    #${CAL_ID} .ltt-day-ev { color: var(--p-chip-ink); }
-
-    #${CAL_ID} .ltt-ev-ok {
-        background: linear-gradient(transparent 14%, var(--hl, var(--p-hl0)) 14%, var(--hl, var(--p-hl0)) 94%, transparent 94%);
-        border-radius: 0;
-    }
-
-    #${CAL_ID} .ltt-ev-ok.ltt-hl-0 { --hl: var(--p-hl0); }
-    #${CAL_ID} .ltt-ev-ok.ltt-hl-1 { --hl: var(--p-hl1); }
-    #${CAL_ID} .ltt-ev-ok.ltt-hl-2 { --hl: var(--p-hl2); }
-
-    #${CAL_ID} .ltt-ev-new {
-        border: 1px dashed var(--p-ink-a);
-        color: var(--p-ink);
-    }
-
-    #${CAL_ID} .ltt-day-more { color: var(--p-soft); }
-
-    /* วันที่เลือก */
-    #${CAL_ID} .ltt-day-head {
-        padding-top: 7px;
-        background: linear-gradient(90deg, var(--p-rule), transparent) left top / 100% 1px no-repeat;
-    }
-
-    #${CAL_ID} .ltt-day-title { color: var(--p-ink); }
-
-    /* การ์ดรายการ = โน้ตกระดาษ */
-    #${CAL_ID} .ltt-card {
-        --ltt-c: var(--p-accent-rgb);
-        border: 1px solid var(--p-rule);
-        background: rgba(255,255,255,.62);
-        box-shadow: 0 1px 2px rgba(0,0,0,.08);
-    }
-
-    #${CAL_ID}[data-cal-theme="night"] .ltt-card { background: rgba(255,255,255,.06); }
-
-    #${CAL_ID} .ltt-card.ltt-weak { border-style: dashed; border-color: var(--p-ink-a); }
-    #${CAL_ID} .ltt-card-title,
-    #${CAL_ID} .ltt-snip { color: var(--p-ink); }
-    #${CAL_ID} .ltt-snip-full { color: var(--p-soft); }
-
-    #${CAL_ID} .ltt-book {
-        background: var(--p-accent);
-        color: var(--p-on);
-    }
-
-    #${CAL_ID} .ltt-key {
-        border-color: var(--p-ink-a);
-        background: rgba(var(--p-accent-rgb), .08);
-        color: var(--p-ink);
-    }
-
-    #${CAL_ID} .ltt-key::before { background: var(--p-accent); }
-
-    #${CAL_ID} .ltt-key.ltt-sec {
-        border-color: var(--p-ink-a);
-        background: transparent;
-        color: var(--p-soft);
-    }
-
-    #${CAL_ID} .ltt-key.ltt-sec::before { background: transparent; border-color: var(--p-accent); }
-
-    #${CAL_ID} .ltt-act {
-        border-color: var(--p-ink-a) !important;
-        background: rgba(255,255,255,.3) !important;
-        color: var(--p-ink);
-    }
-
-    #${CAL_ID} .ltt-act:active { background: rgba(var(--p-accent-rgb), .22) !important; }
-
-    /* ไฮไลต์ข้อความที่เลื่อนไปหา */
-    .mes.ltt-flash { animation: ltt-mes-flash 2.4s ease-out; }
-
-    @keyframes ltt-mes-flash {
-        0%, 35% { box-shadow: 0 0 0 2px rgba(224,120,138,.9), 0 0 18px rgba(224,120,138,.5); }
-        100%    { box-shadow: 0 0 0 2px rgba(224,120,138,0), 0 0 18px rgba(224,120,138,0); }
+    /* time input ในปฏิทิน */
+    ${TOOLWINS} .ltt-time {
+        width: 96px;
+        flex: none;
     }
 `;
 
-    // หน้าต่าง Search / Write ใช้หน้าตาเดียวกับ Triggers: ขยายตัวเลือกของ Triggers ให้ครอบทั้งสาม
-    style.textContent = baseCss.replaceAll(`#${SHEET_ID}`, WINS) + extraCss;
+    const extraCss = ``;
+
+    style.textContent = baseCss + extraCss;
 
     document.head.appendChild(style);
 }
@@ -2958,7 +2586,7 @@ function createSheet() {
         <span class="ltt-spk ltt-spk-a">${SPARK}</span>
         <span class="ltt-spk ltt-spk-b">${SPARK}</span>
         <span class="ltt-spk ltt-spk-c">${SPARK}</span>
-        <span class="ltt-title">${SPARK}Triggers</span>
+        <span class="ltt-title" data-kicker="Over view" data-no="N°01">Triggers</span>
         <div class="ltt-head">
             <span class="ltt-meta"></span>
             <span class="ltt-nav">
@@ -3329,7 +2957,7 @@ function sleep(ms) {
 }
 
 // สร้างหน้าต่างเปล่าหน้าตาเดียวกับหน้าต่าง Triggers
-function createWin(id, title, bodyHtml) {
+function createWin(id, title, bodyHtml, kicker = 'Panel', no = '') {
     let win = document.getElementById(id);
     if (win) return win;
 
@@ -3341,10 +2969,10 @@ function createWin(id, title, bodyHtml) {
         <span class="ltt-corner ltt-c-tr"></span>
         <span class="ltt-corner ltt-c-bl"></span>
         <span class="ltt-corner ltt-c-br"></span>
-        <span class="ltt-spk ltt-spk-a">${SPARK}</span>
-        <span class="ltt-spk ltt-spk-b">${SPARK}</span>
-        <span class="ltt-spk ltt-spk-c">${SPARK}</span>
-        <span class="ltt-title">${SPARK}${title}</span>
+        <span class="ltt-spk ltt-spk-a"></span>
+        <span class="ltt-spk ltt-spk-b"></span>
+        <span class="ltt-spk ltt-spk-c"></span>
+        <span class="ltt-title" data-kicker="${kicker}" data-no="${no}">${title}</span>
         <div class="ltt-head">
             <span class="ltt-meta"></span>
             <span class="ltt-nav">
@@ -3609,7 +3237,7 @@ function createSearchWin() {
             <input type="search" class="ltt-search-input" placeholder="ค้นหาในแชท…" autocomplete="off" enterkeyhint="search">
         </div>
         <div class="ltt-list"></div>
-    `);
+    `, 'Find in chat', 'N°02');
 
     const input = win.querySelector('.ltt-search-input');
 
@@ -3897,7 +3525,7 @@ function createWriteWin() {
     const existing = document.getElementById(WRITE_ID);
     if (existing) return existing;
 
-    const win = createWin(WRITE_ID, 'Write', '<div class="ltt-row"></div>');
+    const win = createWin(WRITE_ID, 'Write', '<div class="ltt-row"></div>', 'Quick marks', 'N°03');
     const row = win.querySelector('.ltt-row');
 
     win.querySelector('.ltt-meta').textContent = 'แตะ 2 ครั้ง = ประกบหลังให้';
@@ -5689,7 +5317,7 @@ function createDiceWin() {
     const existing = document.getElementById(DICE_ID);
     if (existing) return existing;
 
-    return createWin(DICE_ID, 'Dice', '<div class="ltt-dice-ctl"></div><div class="ltt-list"></div>');
+    return createWin(DICE_ID, 'Dice', '<div class="ltt-dice-ctl"></div><div class="ltt-list"></div>', 'Fate & chance', 'N°04');
 }
 
 function openDice() {
@@ -5739,7 +5367,7 @@ let calPicked = '';
 let calResetScroll = false;   // สลับมุมมองแล้วเริ่มที่บนสุด      // วันที่ที่แตะเลือกในตาราง (ISO)
 
 // สีกระดาษปฏิทิน (เพิ่มธีมใหม่ได้: เติมที่นี่ + เพิ่มสีใน CSS ชื่อ data-cal-theme)
-const CAL_THEMES = [['cream', 'ครีม'], ['sky', 'ฟ้า'], ['rose', 'ชมพู'], ['night', 'ดำ']];
+const CAL_THEMES = [['cream', 'Noir'], ['sky', 'Slate'], ['rose', 'Smoke'], ['night', 'Pale']];
 const CAL_THEME_KEY = `${EXT_ID}-cal-theme`;
 let calTheme = loadCalTheme();
 
@@ -6399,7 +6027,7 @@ function createCalWin() {
     const existing = document.getElementById(CAL_ID);
     if (existing) return existing;
 
-    return createWin(CAL_ID, 'Calendar', '<div class="ltt-cal-top"></div><div class="ltt-list"></div>');
+    return createWin(CAL_ID, 'Calendar', '<div class="ltt-cal-top"></div><div class="ltt-list"></div>', 'In story time', 'N°05');
 }
 
 function openCal() {
