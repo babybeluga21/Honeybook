@@ -390,18 +390,10 @@ function addStyles() {
         height: 10px;
     }
 
+    /* ป้ายของลูกเล็กวางข้างลูกเหมือนลูกอื่น (เดิมลอยอยู่เหนือลูกจนไปทับลูกข้างบน) */
     #${PANEL_ID} .ltt-item.ltt-small .ltt-item-label {
-        left: 2px;
-        top: auto;
-        bottom: calc(100% + 8px);
-        transform: none;
         font-size: 7px;
         letter-spacing: .2em;
-    }
-
-    #${PANEL_ID}.ltt-flip .ltt-item.ltt-small .ltt-item-label {
-        left: auto;
-        right: 2px;
     }
 
     #${PANEL_ID} .ltt-catch {
@@ -2080,6 +2072,179 @@ function addStyles() {
     #${SEARCH_ID} .ltt-search-box {
         margin: 0 10px 6px;
     }
+
+
+    /* ============================================================
+     * v26-inspector : Search แยกลุคจาก Triggers ชัดเจน + ตกแต่งเพิ่มทุกหน้าต่าง
+     *   Triggers = ผีเสื้อ · ช่อดอก · ยูคา (ชุด bloom เดิม)
+     *   Search   = กรอบ inspector · ลิลลี่ขาว · ตารางจุด · เลขหน้า (ชุดใหม่)
+     * ============================================================ */
+    :root { --art-lily: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 124'><defs><radialGradient id='lg' cx='50%25' cy='0%25' r='115%25'><stop offset='0' stop-color='%23ffffff'/><stop offset='.55' stop-color='%23c9d6ea'/><stop offset='1' stop-color='%236a82ad'/></radialGradient></defs><g transform='translate(60 78)'><path d='M0 0C-9 -8 -13 -26 -3 -40Q0 -36 3 -40C13 -26 9 -8 0 0Z' transform='rotate(-70) scale(1.05)' fill='url(%23lg)' stroke='%23ffffff' stroke-opacity='.45' stroke-width='.5'/><path d='M0 0C-9 -8 -13 -26 -3 -40Q0 -36 3 -40C13 -26 9 -8 0 0Z' transform='rotate(-38) scale(1.05)' fill='url(%23lg)' stroke='%23ffffff' stroke-opacity='.45' stroke-width='.5'/><path d='M0 0C-9 -8 -13 -26 -3 -40Q0 -36 3 -40C13 -26 9 -8 0 0Z' transform='rotate(-8) scale(1.05)' fill='url(%23lg)' stroke='%23ffffff' stroke-opacity='.45' stroke-width='.5'/><path d='M0 0C-9 -8 -13 -26 -3 -40Q0 -36 3 -40C13 -26 9 -8 0 0Z' transform='rotate(22) scale(1.05)' fill='url(%23lg)' stroke='%23ffffff' stroke-opacity='.45' stroke-width='.5'/><path d='M0 0C-9 -8 -13 -26 -3 -40Q0 -36 3 -40C13 -26 9 -8 0 0Z' transform='rotate(52) scale(1.05)' fill='url(%23lg)' stroke='%23ffffff' stroke-opacity='.45' stroke-width='.5'/><path d='M0 0C-9 -8 -13 -26 -3 -40Q0 -36 3 -40C13 -26 9 -8 0 0Z' transform='rotate(80) scale(1.05)' fill='url(%23lg)' stroke='%23ffffff' stroke-opacity='.45' stroke-width='.5'/><g stroke='%23e8edf5' stroke-width='.7' stroke-linecap='round' fill='none'><path d='M0 0Q-8.4 -20.4 -28 -34' /><path d='M0 0Q-3.0 -24.0 -10 -40' /><path d='M0 0Q2.4 -22.8 8 -38' /><path d='M0 0Q7.8 -19.2 26 -32' /></g><g fill='%23d8c9a0'><circle cx='-28' cy='-34' r='1.6'/><circle cx='-10' cy='-40' r='1.6'/><circle cx='8' cy='-38' r='1.6'/><circle cx='26' cy='-32' r='1.6'/></g></g><path d='M60 78C62 96 58 108 60 120' stroke='%23b4c3dc' stroke-width='1.4' fill='none' stroke-opacity='.7'/></svg>"); }
+
+    /* ---------- ทุกหน้าต่าง: ตารางจุดเล็ก + แท็กมุม (แบบโปสเตอร์ Bloom Code) ---------- */
+    ${WINS}::before {
+        content: '';
+        position: absolute;
+        right: 10px;
+        top: 30px;
+        width: 44px;
+        height: 62px;
+        z-index: 0;
+        pointer-events: none;
+        background: radial-gradient(circle, var(--ltt-hi) 0 .7px, transparent 1.1px) 0 0 / 7px 7px;
+        -webkit-mask-image: linear-gradient(200deg, #000 0%, transparent 78%);
+        mask-image: linear-gradient(200deg, #000 0%, transparent 78%);
+        opacity: .5;
+    }
+
+    #${WRITE_ID}::before { display: none; }
+
+    ${WINS} .ltt-spk-f::after {
+        content: '+';
+        position: absolute;
+        left: 30px;
+        top: 6px;
+        font: 400 9px/9px var(--ltt-mono);
+        color: var(--ltt-hi);
+        opacity: .7;
+    }
+
+    /* ---------- Search: ปิดชุด bloom ที่ซ้ำกับ Triggers ---------- */
+    #${SEARCH_ID} .ltt-spk-b,
+    #${SEARCH_ID} .ltt-spk-c { display: none !important; }
+
+    /* ผีเสื้อ -> กรอบ inspector มีจุดจับ (แบบภาพ lily) */
+    #${SEARCH_ID} .ltt-spk-a {
+        background: none;
+        filter: none;
+        transform: none;
+        top: -26px;
+        right: 16px;
+        width: 56px;
+        height: 34px;
+        border: 1px solid var(--ltt-hi);
+        opacity: .9;
+        --dot: radial-gradient(circle, var(--ltt-bg) 0 1.6px, var(--ltt-hi) 1.8px 2.6px, transparent 3px);
+        --gold: radial-gradient(circle, #d8c9a0 0 2.2px, transparent 2.6px);
+        background:
+            var(--dot) 50% 0 / 7px 7px no-repeat,
+            var(--gold) 0 50% / 7px 7px no-repeat,
+            var(--gold) 100% 50% / 7px 7px no-repeat,
+            var(--gold) 50% 100% / 7px 7px no-repeat;
+    }
+
+    #${SEARCH_ID} .ltt-spk-a::before {
+        content: '✕';
+        position: absolute;
+        left: -9px;
+        top: -9px;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--ltt-hi);
+        color: var(--ltt-on-hi, #0a0b0e);
+        font: 400 6px/11px var(--ltt-mono);
+        text-align: center;
+    }
+
+    /* สคริปต์เขียน -> เลขหน้า ‹ 1/2 › */
+    #${SEARCH_ID} .ltt-spk-d {
+        background: none;
+        transform: none;
+        left: 16px;
+        top: -9px;
+        width: auto;
+        height: auto;
+        opacity: .85;
+    }
+
+    #${SEARCH_ID} .ltt-spk-d::before {
+        content: '‹  1 / 2  ›';
+        padding: 0 4px;
+        background: var(--ltt-panel);
+        font: 400 6px/10px var(--ltt-mono);
+        letter-spacing: .3em;
+        color: var(--ltt-blue);
+        white-space: nowrap;
+    }
+
+    /* hero ใช้ลิลลี่ขาวแทนภาพช่อดอก */
+    #${SEARCH_ID} .ltt-hero .crop-a {
+        background-image: var(--art-lily);
+        background-size: auto 150%;
+        background-position: 50% 30%;
+        background-color: #070910;
+        filter: none;
+    }
+
+    #${SEARCH_ID} .ltt-hero .crop-b {
+        background-image:
+            radial-gradient(circle, var(--ltt-hi) 0 .8px, transparent 1.2px),
+            linear-gradient(160deg, #0b1020, #1b2438);
+        background-size: 6px 6px, auto;
+        background-position: 0 0, 0 0;
+        filter: none;
+    }
+
+    /* ลิลลี่ตัวใหญ่ขอบล่างขวา แทนช่อดอกเดิม (ลอยทับกรอบได้เหมือนโปสเตอร์) */
+    #${SEARCH_ID}::before {
+        left: auto;
+        right: -26px;
+        top: auto;
+        bottom: -34px;
+        width: 92px;
+        height: 96px;
+        z-index: 5;
+        background: var(--art-lily) center / contain no-repeat;
+        -webkit-mask-image: none;
+        mask-image: none;
+        opacity: .92;
+        filter: drop-shadow(0 6px 10px rgba(0,0,0,.65));
+        transform: rotate(-14deg);
+    }
+
+    /* คำบรรยายแนวตั้งฝั่งซ้ายของ Search (spk-e ฝั่งขวามีอยู่แล้ว) */
+    #${SEARCH_ID} .ltt-spk-c {
+        display: block !important;
+        left: -12px;
+        top: 130px;
+        bottom: auto;
+        width: 9px;
+        height: 110px;
+        background: none;
+        transform: none;
+        filter: none;
+        opacity: .8;
+    }
+
+    #${SEARCH_ID} .ltt-spk-c::before {
+        content: 'PETALS ARE MEMORIES IN A DIFFERENT LANGUAGE';
+        position: absolute;
+        left: 0;
+        top: 0;
+        writing-mode: vertical-rl;
+        white-space: nowrap;
+        font: 400 5px/9px var(--ltt-mono);
+        letter-spacing: .22em;
+        color: var(--ltt-dim);
+    }
+
+    /* ---------- Triggers / Dice / Calendar: เพิ่มคำบรรยายเล็กใต้ชื่อ ---------- */
+    #${SHEET_ID} .ltt-spk-d::after,
+    #${DICE_ID} .ltt-spk-d::after,
+    #${CAL_ID} .ltt-spk-d::after {
+        position: absolute;
+        left: 4px;
+        top: 24px;
+        white-space: nowrap;
+        font: 400 5px/8px var(--ltt-mono);
+        letter-spacing: .26em;
+        color: var(--ltt-dim);
+    }
+
+    #${SHEET_ID} .ltt-spk-d::after { content: 'SOME THINGS BLOOM EVEN IN SILENCE'; }
+    #${DICE_ID} .ltt-spk-d::after { content: 'BETWEEN DATA AND DREAMS'; }
+    #${CAL_ID} .ltt-spk-d::after { content: 'NATURE FINDS A WAY TO SPEAK'; }
 `;
 
     style.textContent = baseCss + extraCss;
