@@ -89,7 +89,7 @@ let livePage = 0;
 let capturing = false;
 let pendingTriggers = null;
 
-const VERSION = 'v24-noir';
+const VERSION = 'v25-bloom';
 const DISPOSE_KEY = '__lttDispose';
 const LOADED_KEY = '__lttLoadedFrom';
 
@@ -142,8 +142,9 @@ function addStyles() {
 
     const baseCss = `
     /* ============================================================
-     * Honeybook Noir editorial theme (v23)
-     * โทน: ดำ · เทา · น้ำเงินหม่น | ฟอนต์: Italiana / Space Mono / Noto Sans Thai
+     * Honeybook Noir editorial theme (v25-bloom)
+     * โทน: ดำ · เทา · น้ำเงินหม่น + floral geometric overlays
+     * ฟอนต์: Italiana / Space Mono / Noto Sans Thai
      * ============================================================ */
 
     :root {
@@ -1856,7 +1857,230 @@ function addStyles() {
     }
 `;
 
-    const extraCss = ``;
+    const extraCss = `
+    /* ============================================================
+     * v25-bloom : Search ≠ Triggers, Calendar ยังมีของตกแต่ง, polish รวม
+     * ============================================================ */
+
+    /* ---------- Search ตกแต่งคนละแบบกับ Triggers ---------- */
+    #${SEARCH_ID} .ltt-spk-a {
+        top: -18px;
+        right: 8px;
+        width: 54px;
+        height: 42px;
+        transform: rotate(18deg) scaleX(-1);
+        filter: drop-shadow(0 0 8px rgba(143,163,196,.55));
+        opacity: .95;
+    }
+
+    #${SEARCH_ID} .ltt-spk-b {
+        right: -52px;
+        bottom: -58px;
+        width: 96px;
+        height: 96px;
+        transform: rotate(-12deg);
+        opacity: .88;
+    }
+
+    #${SEARCH_ID} .ltt-spk-c {
+        left: -34px;
+        bottom: 18px;
+        width: 48px;
+        height: 108px;
+        transform: rotate(6deg);
+        opacity: .85;
+    }
+
+    #${SEARCH_ID} .ltt-spk-d {
+        left: 10px;
+        top: -14px;
+        width: 78px;
+        height: 28px;
+        transform: rotate(2deg);
+        opacity: .7;
+    }
+
+    #${SEARCH_ID} .ltt-spk-e {
+        right: -15px;
+        top: 64px;
+        width: 9px;
+        height: 110px;
+    }
+
+    #${SEARCH_ID} .ltt-spk-e::before {
+        content: 'SEEK · BETWEEN THE LINES · FRAGMENTS OF SILENCE';
+        letter-spacing: .2em;
+        font-size: 5.2px;
+        color: var(--ltt-blue);
+        opacity: .85;
+    }
+
+    #${SEARCH_ID} .ltt-spk-f {
+        left: -12px;
+        top: 78px;
+        width: 22px;
+        height: 22px;
+        background: repeating-linear-gradient(-45deg, var(--ltt-blue) 0 1px, transparent 1px 3px) #090a0d;
+        border-color: var(--ltt-blue);
+    }
+
+    #${SEARCH_ID}::after {
+        font-size: 64px;
+        letter-spacing: .06em;
+        -webkit-text-stroke: 1px rgba(143,163,196,.08);
+        bottom: 8px;
+        left: 12px;
+    }
+
+    #${SEARCH_ID} .ltt-hero .crop-a {
+        width: 58%;
+        background-position: 42% 55%;
+        background-size: 210% auto;
+    }
+
+    #${SEARCH_ID} .ltt-hero .crop-b {
+        width: 42%;
+        top: 10px;
+        background-position: 72% 28%;
+        background-size: 320% auto;
+        box-shadow: -5px 5px 12px rgba(0,0,0,.55);
+    }
+
+    /* ---------- Calendar: คืน/เสริมของตกแต่งที่เบา (ไม่เบียดตาราง) ---------- */
+    /* ยังซ่อน spk-b / spk-c / hero ตามเดิมเพื่อไม่ทับปฏิทิน แต่ปรับของที่เหลือให้ชัด */
+    #${CAL_ID} .ltt-spk-a {
+        top: -20px;
+        right: 14px;
+        width: 58px;
+        height: 46px;
+        transform: rotate(-14deg);
+        filter: drop-shadow(0 0 9px rgba(143,163,196,.5));
+        opacity: .95;
+    }
+
+    #${CAL_ID} .ltt-spk-d {
+        left: 8px;
+        top: -15px;
+        width: 86px;
+        height: 30px;
+        transform: rotate(-2deg);
+        opacity: .75;
+    }
+
+    #${CAL_ID} .ltt-spk-e {
+        right: -14px;
+        top: 70px;
+        width: 9px;
+        height: 130px;
+    }
+
+    #${CAL_ID} .ltt-spk-e::before {
+        content: 'IN STORY TIME · DAYS THAT WAIT · FULL MOON';
+        letter-spacing: .18em;
+        font-size: 5.3px;
+        color: var(--ltt-blue);
+        opacity: .9;
+    }
+
+    #${CAL_ID} .ltt-spk-f {
+        left: -13px;
+        top: 86px;
+        width: 24px;
+        height: 24px;
+        border-color: var(--ltt-blue);
+        background: repeating-linear-gradient(45deg, var(--ltt-hi) 0 1px, transparent 1px 3.5px) #090a0d;
+    }
+
+    #${CAL_ID}::after {
+        content: attr(data-ghost);
+        font-size: 58px;
+        letter-spacing: .04em;
+        -webkit-text-stroke: 1px rgba(143,163,196,.09);
+        bottom: 6px;
+        opacity: .85;
+    }
+
+    /* Dice เบา ๆ เช่นกัน */
+    #${DICE_ID} .ltt-spk-a {
+        top: -18px;
+        right: 12px;
+        transform: rotate(8deg);
+        filter: drop-shadow(0 0 7px rgba(143,163,196,.45));
+    }
+
+    #${DICE_ID} .ltt-spk-e::before {
+        content: 'FATE & CHANCE · ROLL THE DICE';
+        font-size: 5.2px;
+        letter-spacing: .2em;
+        color: var(--ltt-blue);
+    }
+
+    /* ---------- Geometric polish รวม (มุม + เงา + ชื่อ) ---------- */
+    ${WINS} .ltt-corner {
+        width: 10px;
+        height: 10px;
+        border-width: 1.15px;
+        opacity: .92;
+    }
+
+    ${WINS} .ltt-corner::before,
+    ${WINS} .ltt-corner::after {
+        content: '';
+        position: absolute;
+        background: var(--ltt-blue);
+        opacity: .5;
+        pointer-events: none;
+    }
+
+    ${WINS} .ltt-c-tl::before { width: 5px; height: 1px; top: -1px; left: 9px; }
+    ${WINS} .ltt-c-tl::after  { width: 1px; height: 5px; top: 9px; left: -1px; }
+    ${WINS} .ltt-c-tr::before { width: 5px; height: 1px; top: -1px; right: 9px; }
+    ${WINS} .ltt-c-tr::after  { width: 1px; height: 5px; top: 9px; right: -1px; }
+    ${WINS} .ltt-c-bl::before { width: 5px; height: 1px; bottom: -1px; left: 9px; }
+    ${WINS} .ltt-c-bl::after  { width: 1px; height: 5px; bottom: 9px; left: -1px; }
+    ${WINS} .ltt-c-br::before { width: 5px; height: 1px; bottom: -1px; right: 9px; }
+    ${WINS} .ltt-c-br::after  { width: 1px; height: 5px; bottom: 9px; right: -1px; }
+
+    ${WINS} {
+        box-shadow:
+            0 0 0 1px rgba(143,163,196,.16),
+            0 14px 42px rgba(0,0,0,.58),
+            0 0 50px rgba(15,20,35,.3),
+            inset 0 1px 0 rgba(223,226,232,.045);
+    }
+
+    ${WINS} .ltt-title {
+        letter-spacing: .1em;
+        text-shadow: 0 0 18px rgba(143,163,196,.25);
+    }
+
+    ${WINS} .ltt-title::before {
+        opacity: .75;
+    }
+
+    ${WINS} .ltt-card {
+        box-shadow: inset 0 0 0 1px rgba(143,163,196,.06);
+        transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    ${WINS} .ltt-card:hover {
+        border-color: rgba(143,163,196,.35);
+        box-shadow: inset 0 0 0 1px rgba(143,163,196,.12), 0 4px 14px rgba(0,0,0,.25);
+    }
+
+    ${WINS} .ltt-head {
+        border-bottom: 1px solid rgba(143,163,196,.12);
+        padding-bottom: 2px;
+    }
+
+    ${WINS} .ltt-spk-a {
+        filter: drop-shadow(0 0 7px rgba(143,163,196,.45));
+    }
+
+    #${SEARCH_ID} .ltt-search-box {
+        margin: 0 10px 6px;
+    }
+`;
 
     style.textContent = baseCss + extraCss;
 
@@ -3227,6 +3451,7 @@ function createWin(id, title, bodyHtml, kicker = 'Panel', no = '') {
 }
 
 // วางหน้าต่างเหนือกล่องข้อความ (เหมือนหน้าต่าง Triggers) และไม่ให้จมใต้คีย์บอร์ด
+// Search ใช้ maxHeight ใกล้เคียง Triggers เพื่อไม่ให้กรอบลอยสูงเกินไป
 function positionWin(win) {
     if (!win || !win.classList.contains('ltt-visible')) return;
 
@@ -3236,13 +3461,15 @@ function positionWin(win) {
 
     const vv = window.visualViewport;
     const viewH = vv ? Math.min(window.innerHeight, vv.height + vv.offsetTop) : window.innerHeight;
-    const gap = 14;
+    const isSearch = win.id === SEARCH_ID;
+    const gap = isSearch ? 18 : 14;
+    const maxRatio = isSearch ? 0.40 : 0.48;
 
     const bottomEdge = hasBox ? Math.min(rect.top - gap, viewH - gap) : viewH - 80;
     const room = Math.max(110, bottomEdge - 14);
 
     resetCustomStyle(win);
-    win.style.maxHeight = `${Math.min(room, viewH * 0.5)}px`;
+    win.style.maxHeight = `${Math.min(room, viewH * maxRatio)}px`;
 
     const prevTransition = win.style.transition;
     const prevTransform = win.style.transform;
