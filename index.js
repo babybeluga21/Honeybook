@@ -1854,90 +1854,6 @@ function addStyles() {
      * v25-bloom : Search ≠ Triggers, Calendar ยังมีของตกแต่ง, polish รวม
      * ============================================================ */
 
-    /* ---------- Search ตกแต่งคนละแบบกับ Triggers ---------- */
-    #${SEARCH_ID} .ltt-spk-a {
-        top: -18px;
-        right: 8px;
-        width: 54px;
-        height: 42px;
-        transform: rotate(18deg) scaleX(-1);
-        filter: drop-shadow(0 0 8px rgba(143,163,196,.55));
-        opacity: .95;
-    }
-
-    #${SEARCH_ID} .ltt-spk-b {
-        right: -52px;
-        bottom: -58px;
-        width: 96px;
-        height: 96px;
-        transform: rotate(-12deg);
-        opacity: .88;
-    }
-
-    #${SEARCH_ID} .ltt-spk-c {
-        left: -34px;
-        bottom: 18px;
-        width: 48px;
-        height: 108px;
-        transform: rotate(6deg);
-        opacity: .85;
-    }
-
-    #${SEARCH_ID} .ltt-spk-d {
-        left: 10px;
-        top: -14px;
-        width: 78px;
-        height: 28px;
-        transform: rotate(2deg);
-        opacity: .7;
-    }
-
-    #${SEARCH_ID} .ltt-spk-e {
-        right: -15px;
-        top: 64px;
-        width: 9px;
-        height: 110px;
-    }
-
-    #${SEARCH_ID} .ltt-spk-e::before {
-        content: 'SEEK · BETWEEN THE LINES · FRAGMENTS OF SILENCE';
-        letter-spacing: .2em;
-        font-size: 5.2px;
-        color: var(--ltt-blue);
-        opacity: .85;
-    }
-
-    #${SEARCH_ID} .ltt-spk-f {
-        left: -12px;
-        top: 78px;
-        width: 22px;
-        height: 22px;
-        background: repeating-linear-gradient(-45deg, var(--ltt-blue) 0 1px, transparent 1px 3px) #090a0d;
-        border-color: var(--ltt-blue);
-    }
-
-    #${SEARCH_ID}::after {
-        font-size: 64px;
-        letter-spacing: .06em;
-        -webkit-text-stroke: 1px rgba(143,163,196,.08);
-        bottom: 8px;
-        left: 12px;
-    }
-
-    #${SEARCH_ID} .ltt-hero .crop-a {
-        width: 58%;
-        background-position: 42% 55%;
-        background-size: 210% auto;
-    }
-
-    #${SEARCH_ID} .ltt-hero .crop-b {
-        width: 42%;
-        top: 10px;
-        background-position: 72% 28%;
-        background-size: 320% auto;
-        box-shadow: -5px 5px 12px rgba(0,0,0,.55);
-    }
-
     /* ---------- Calendar: คืน/เสริมของตกแต่งที่เบา (ไม่เบียดตาราง) ---------- */
     /* ยังซ่อน spk-b / spk-c / hero ตามเดิมเพื่อไม่ทับปฏิทิน แต่ปรับของที่เหลือให้ชัด */
     #${CAL_ID} .ltt-spk-a {
@@ -2109,126 +2025,6 @@ function addStyles() {
         opacity: .7;
     }
 
-    /* ---------- Search: ปิดชุด bloom ที่ซ้ำกับ Triggers ---------- */
-    #${SEARCH_ID} .ltt-spk-b,
-    #${SEARCH_ID} .ltt-spk-c { display: none !important; }
-
-    /* ผีเสื้อ -> กรอบ inspector มีจุดจับ (แบบภาพ lily) */
-    #${SEARCH_ID} .ltt-spk-a {
-        background: none;
-        filter: none;
-        transform: none;
-        top: -26px;
-        right: 16px;
-        width: 56px;
-        height: 34px;
-        border: 1px solid var(--ltt-hi);
-        opacity: .9;
-        --dot: radial-gradient(circle, var(--ltt-bg) 0 1.6px, var(--ltt-hi) 1.8px 2.6px, transparent 3px);
-        --gold: radial-gradient(circle, #d8c9a0 0 2.2px, transparent 2.6px);
-        background:
-            var(--dot) 50% 0 / 7px 7px no-repeat,
-            var(--gold) 0 50% / 7px 7px no-repeat,
-            var(--gold) 100% 50% / 7px 7px no-repeat,
-            var(--gold) 50% 100% / 7px 7px no-repeat;
-    }
-
-    #${SEARCH_ID} .ltt-spk-a::before {
-        content: '✕';
-        position: absolute;
-        left: -9px;
-        top: -9px;
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        background: var(--ltt-hi);
-        color: var(--ltt-on-hi, #0a0b0e);
-        font: 400 6px/11px var(--ltt-mono);
-        text-align: center;
-    }
-
-    /* สคริปต์เขียน -> เลขหน้า ‹ 1/2 › */
-    #${SEARCH_ID} .ltt-spk-d {
-        background: none;
-        transform: none;
-        left: 16px;
-        top: -9px;
-        width: auto;
-        height: auto;
-        opacity: .85;
-    }
-
-    #${SEARCH_ID} .ltt-spk-d::before {
-        content: '‹  1 / 2  ›';
-        padding: 0 4px;
-        background: var(--ltt-panel);
-        font: 400 6px/10px var(--ltt-mono);
-        letter-spacing: .3em;
-        color: var(--ltt-blue);
-        white-space: nowrap;
-    }
-
-    /* hero ใช้ลิลลี่ขาวแทนภาพช่อดอก */
-    #${SEARCH_ID} .ltt-hero .crop-a {
-        background-image: var(--art-lily);
-        background-size: auto 150%;
-        background-position: 50% 30%;
-        background-color: #070910;
-        filter: none;
-    }
-
-    #${SEARCH_ID} .ltt-hero .crop-b {
-        background-image:
-            radial-gradient(circle, var(--ltt-hi) 0 .8px, transparent 1.2px),
-            linear-gradient(160deg, #0b1020, #1b2438);
-        background-size: 6px 6px, auto;
-        background-position: 0 0, 0 0;
-        filter: none;
-    }
-
-    /* ลิลลี่ตัวใหญ่ขอบล่างขวา แทนช่อดอกเดิม (ลอยทับกรอบได้เหมือนโปสเตอร์) */
-    #${SEARCH_ID}::before {
-        left: auto;
-        right: -26px;
-        top: auto;
-        bottom: -34px;
-        width: 92px;
-        height: 96px;
-        z-index: 5;
-        background: var(--art-lily) center / contain no-repeat;
-        -webkit-mask-image: none;
-        mask-image: none;
-        opacity: .92;
-        filter: drop-shadow(0 6px 10px rgba(0,0,0,.65));
-        transform: rotate(-14deg);
-    }
-
-    /* คำบรรยายแนวตั้งฝั่งซ้ายของ Search (spk-e ฝั่งขวามีอยู่แล้ว) */
-    #${SEARCH_ID} .ltt-spk-c {
-        display: block !important;
-        left: -12px;
-        top: 130px;
-        bottom: auto;
-        width: 9px;
-        height: 110px;
-        background: none;
-        transform: none;
-        filter: none;
-        opacity: .8;
-    }
-
-    #${SEARCH_ID} .ltt-spk-c::before {
-        content: 'PETALS ARE MEMORIES IN A DIFFERENT LANGUAGE';
-        position: absolute;
-        left: 0;
-        top: 0;
-        writing-mode: vertical-rl;
-        white-space: nowrap;
-        font: 400 5px/9px var(--ltt-mono);
-        letter-spacing: .22em;
-        color: var(--ltt-dim);
-    }
-
     /* ---------- Triggers / Dice / Calendar: เพิ่มคำบรรยายเล็กใต้ชื่อ ---------- */
     #${SHEET_ID} .ltt-spk-d::after,
     #${DICE_ID} .ltt-spk-d::after,
@@ -2245,6 +2041,347 @@ function addStyles() {
     #${SHEET_ID} .ltt-spk-d::after { content: 'SOME THINGS BLOOM EVEN IN SILENCE'; }
     #${DICE_ID} .ltt-spk-d::after { content: 'BETWEEN DATA AND DREAMS'; }
     #${CAL_ID} .ltt-spk-d::after { content: 'NATURE FINDS A WAY TO SPEAK'; }
+
+    /* ============================================================
+     * v28-tearsheet : Search = "ใบปลิวพิมพ์ดีด/โปสเตอร์" โครงใหม่ทั้งหน้า
+     *   แถบชื่อแนวตั้งด้านซ้าย · ไม่มีกรอบ/มุม · รายการแบบสารบัญเลขใหญ่
+     *   (ต่างจากหน้าต่างอื่นที่เป็นกรอบ + มุมสี่เหลี่ยม)
+     * ============================================================ */
+    #${SEARCH_ID} {
+        --lav: #b9aef2;
+        --lav2: rgba(185,174,242,.38);
+        --lav3: rgba(185,174,242,.12);
+        padding-left: 40px;
+        border: 0;
+        background:
+            linear-gradient(90deg, rgba(110,92,190,.26), rgba(60,70,120,.12)) 0 0 / 40px 100% no-repeat,
+            radial-gradient(70% 38% at 100% 0%, rgba(150,130,230,.22), transparent 70%),
+            radial-gradient(60% 30% at 0% 100%, rgba(80,110,190,.18), transparent 70%),
+            linear-gradient(180deg, #0f111a, #08090d);
+        box-shadow: 0 18px 40px rgba(0,0,0,.7), inset 1px 0 0 rgba(185,174,242,.28);
+    }
+
+    #${SEARCH_ID} .ltt-corner,
+    #${SEARCH_ID} .ltt-hero { display: none !important; }
+
+    /* แถบชื่อแนวตั้ง */
+    #${SEARCH_ID} .ltt-title {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 40px;
+        box-sizing: border-box;
+        padding: 70px 0 12px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        background: none;
+        font-size: 25px;
+        letter-spacing: .2em;
+        color: var(--ltt-hi);
+        text-shadow: 0 0 22px rgba(185,174,242,.55);
+        z-index: 2;
+    }
+
+    #${SEARCH_ID} .ltt-title::before {
+        color: var(--lav);
+        font-size: 6.5px;
+        letter-spacing: .3em;
+    }
+
+    #${SEARCH_ID} .ltt-title::after {
+        color: var(--lav);
+        font-size: 6.5px;
+        letter-spacing: .3em;
+        margin: 0;
+    }
+
+    /* ลิลลี่จางๆ ในแถบ + ฝุ่นจุด */
+    #${SEARCH_ID}::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        right: auto;
+        width: 40px;
+        height: auto;
+        z-index: 1;
+        pointer-events: none;
+        filter: none;
+        transform: none;
+        opacity: 1;
+        background:
+            radial-gradient(circle, rgba(223,226,232,.55) 0 .6px, transparent 1px) 0 0 / 5px 7px,
+            var(--art-lily) 50% 100% / 150% auto no-repeat;
+        -webkit-mask-image: linear-gradient(0deg, rgba(0,0,0,.8), rgba(0,0,0,.35) 40%, transparent 75%);
+        mask-image: linear-gradient(0deg, rgba(0,0,0,.8), rgba(0,0,0,.35) 40%, transparent 75%);
+    }
+
+    /* คำบรรยายมุมขวาล่างแทน ghost เดิม */
+    #${SEARCH_ID}::after {
+        content: 'fragments of silence';
+        left: auto;
+        right: 14px;
+        bottom: 5px;
+        font: italic 400 9px/1 var(--ltt-serif);
+        letter-spacing: .12em;
+        text-transform: none;
+        -webkit-text-stroke: 0;
+        color: var(--lav2);
+        z-index: 3;
+    }
+
+    /* ผีเสื้อบินออกมุมขวาบน + ฝนจุดด้านขวา */
+    #${SEARCH_ID} .ltt-spk-a {
+        top: -34px;
+        right: -10px;
+    }
+
+    #${SEARCH_ID} .ltt-spk-b {
+        right: -13px;
+        top: 26px;
+        bottom: auto;
+        width: 9px;
+        height: 110px;
+        transform: none;
+        filter: none;
+        opacity: .6;
+        border: 0;
+        background: radial-gradient(circle, var(--lav) 0 .75px, transparent 1.2px) 0 0 / 4px 6px;
+        -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+        mask-image: linear-gradient(180deg, #000, transparent);
+    }
+
+    /* หัวหน้าต่าง: เลขผลลัพธ์ตัวใหญ่ ไม่มีเส้นล่าง */
+    #${SEARCH_ID} .ltt-head {
+        margin: 0 12px 0 4px;
+        padding: 14px 0 0;
+        background: none;
+        border: 0;
+    }
+
+    #${SEARCH_ID} .ltt-meta {
+        font: 300 9.5px/1.5 var(--ltt-thai);
+        color: var(--lav);
+        letter-spacing: .08em;
+    }
+
+    #${SEARCH_ID} .ltt-search-box {
+        position: relative;
+        margin: 6px 12px 2px 4px;
+    }
+
+    #${SEARCH_ID} .ltt-search-box::before {
+        content: '( QUERY )';
+        display: block;
+        margin-bottom: 1px;
+        font: 400 6px/1 var(--ltt-mono);
+        letter-spacing: .34em;
+        color: var(--ltt-dim);
+    }
+
+    #${SEARCH_ID} .ltt-search-input {
+        padding: 2px 0 4px;
+        font: 400 17px/1.5 var(--ltt-serif), var(--ltt-thai);
+        letter-spacing: .02em;
+        border-bottom: 1px solid var(--lav2);
+    }
+
+    /* รายการ = แถวสารบัญ ไม่ใช่การ์ดมีกรอบ */
+    #${SEARCH_ID} .ltt-list {
+        gap: 0;
+        padding: 6px 12px 22px 4px;
+    }
+
+    #${SEARCH_ID} .ltt-card {
+        overflow: visible;
+        padding: 10px 0 9px;
+        border: 0;
+        border-bottom: 1px dashed var(--lav3);
+        background: transparent;
+        box-shadow: none;
+    }
+
+    #${SEARCH_ID} .ltt-card.ltt-const {
+        background: linear-gradient(90deg, rgba(185,174,242,.1), transparent 70%);
+    }
+
+    #${SEARCH_ID} .ltt-card::before,
+    #${SEARCH_ID} .ltt-card::after { display: none; }
+
+    #${SEARCH_ID} .ltt-num {
+        padding: 0;
+        margin: 0 4px 0 0;
+        border: 0;
+        background: none;
+        font: 400 23px/1 var(--ltt-serif);
+        letter-spacing: 0;
+        color: var(--lav);
+        text-shadow: 0 0 14px rgba(185,174,242,.35);
+        min-width: 0;
+    }
+
+    #${SEARCH_ID} .ltt-book {
+        border: 0;
+        padding: 0;
+        color: var(--ltt-dim);
+        font-size: 7px;
+        letter-spacing: .24em;
+    }
+
+    #${SEARCH_ID} .ltt-act {
+        color: var(--lav);
+        border-bottom: 1px solid var(--lav3) !important;
+    }
+
+    #${SEARCH_ID} .ltt-snip {
+        margin-top: 5px;
+        padding-left: 1px;
+    }
+
+    /* ---------- ตกแต่งเพิ่ม (แบบโปสเตอร์ Bloom Code) ---------- */
+
+    /* กรอบบางซ้อนนอกหน้าต่าง */
+    #${SEARCH_ID} {
+        outline: 1px solid var(--lav3);
+        outline-offset: 5px;
+    }
+
+    /* กรอบ crop ลิลลี่มีจุดมุม โผล่มุมซ้ายบนนอกหน้าต่าง */
+    #${SEARCH_ID} .ltt-spk-c {
+        display: block !important;
+        left: -14px;
+        top: -44px;
+        right: auto;
+        bottom: auto;
+        width: 62px;
+        height: 36px;
+        transform: none;
+        filter: none;
+        opacity: 1;
+        border: 1px solid var(--lav2);
+        background:
+            radial-gradient(circle, rgba(223,226,232,.5) 0 .6px, transparent 1px) 0 0 / 6px 6px,
+            var(--art-lily) 50% 62% / auto 190% no-repeat,
+            #0a0b12;
+        -webkit-mask-image: none;
+        mask-image: none;
+        box-shadow: 0 6px 14px rgba(0,0,0,.55);
+    }
+
+    #${SEARCH_ID} .ltt-spk-c::before,
+    #${SEARCH_ID} .ltt-spk-c::after {
+        content: '';
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        background: var(--ltt-hi);
+    }
+
+    #${SEARCH_ID} .ltt-spk-c::before { left: -3px; top: -3px; }
+    #${SEARCH_ID} .ltt-spk-c::after { right: -3px; bottom: -3px; }
+
+    /* ประกาย ✦ ข้างผีเสื้อ */
+    #${SEARCH_ID} .ltt-spk-d {
+        display: block !important;
+        left: auto;
+        right: 52px;
+        top: -34px;
+        width: auto;
+        height: auto;
+        transform: none;
+        background: none;
+        filter: none;
+        opacity: 1;
+    }
+
+    #${SEARCH_ID} .ltt-spk-d::before {
+        content: '✦   ·   ✧';
+        font: 400 8px/1 var(--ltt-mono);
+        letter-spacing: .2em;
+        color: var(--lav);
+        text-shadow: 0 0 8px rgba(185,174,242,.8);
+        white-space: nowrap;
+    }
+
+    /* คำบรรยายแนวตั้งขวาล่าง */
+    #${SEARCH_ID} .ltt-spk-e {
+        display: block !important;
+        right: -15px;
+        top: auto;
+        bottom: 14px;
+        left: auto;
+    }
+
+    #${SEARCH_ID} .ltt-spk-e::before {
+        content: 'BETWEEN DATA AND DREAMS THERE ARE FLOWERS';
+        font-size: 5px;
+        letter-spacing: .24em;
+        color: var(--lav);
+        opacity: .85;
+    }
+
+    /* + สามตัวด้านซ้ายนอกหน้าต่าง + ปี */
+    #${SEARCH_ID} .ltt-spk-f {
+        display: block !important;
+        left: -15px;
+        top: 70px;
+        width: 9px;
+        height: auto;
+        border: 0;
+        background: none;
+        box-shadow: none;
+        opacity: .85;
+        white-space: pre;
+        font: 400 9px/11px var(--ltt-mono);
+        color: var(--ltt-hi);
+    }
+
+    #${SEARCH_ID} .ltt-spk-f::before { content: '+\\A+\\A+'; white-space: pre; }
+    #${SEARCH_ID} .ltt-spk-f::after { display: none !important; }
+
+    /* + เล็กๆ ปลายเส้นประระหว่างแถว */
+    #${SEARCH_ID} .ltt-card::after {
+        display: block;
+        content: '+';
+        position: absolute;
+        right: 0;
+        bottom: -5px;
+        font: 400 9px/9px var(--ltt-mono);
+        color: var(--lav);
+        background: none;
+        opacity: .8;
+        animation: none;
+    }
+
+    /* หัวผลลัพธ์: ◆ แทน ■ + เส้นจุดใต้หัว */
+    #${SEARCH_ID} .ltt-meta::before {
+        content: '◆';
+        width: auto;
+        height: auto;
+        background: none;
+        border: 0;
+        box-shadow: none;
+        color: var(--lav);
+        font-size: 7px;
+        margin-right: 4px;
+    }
+
+    #${SEARCH_ID} .ltt-search-box::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 4px;
+        width: 34px;
+        height: 4px;
+        background: radial-gradient(circle, var(--lav) 0 .7px, transparent 1.1px) 0 0 / 5px 4px;
+        opacity: .7;
+    }
 `;
 
     style.textContent = baseCss + extraCss;
